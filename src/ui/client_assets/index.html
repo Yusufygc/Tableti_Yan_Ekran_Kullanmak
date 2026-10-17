@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TabScreen USB — 3. Ekran</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: rgba(17, 24, 39, 0.88);
+      --border: rgba(255, 255, 255, 0.16);
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #screenCanvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      object-fit: contain;
+      background: #000;
+    }
+    #hud {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      font-size: 13px;
+      transition: opacity 0.2s ease;
+    }
+    #hud.minimized .hud-item {
+      display: none;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warn);
+    }
+    .dot.connected {
+      background: var(--ok);
+    }
+    button.hud-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.hud-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    button.hud-btn.active {
+      background: var(--accent);
+      color: #090d16;
+      border-color: var(--accent);
+    }
+    .touch-ripple {
+      position: fixed;
+      width: 28px;
+      height: 28px;
+      margin-left: -14px;
+      margin-top: -14px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      pointer-events: none;
+      z-index: 40;
+      animation: rippleOut 0.35s ease-out forwards;
+    }
+    @keyframes rippleOut {
+      from { transform: scale(0.4); opacity: 0.95; }
+      to { transform: scale(1.6); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="screenCanvas" aria-label="3. Ekran Görüntü Alanı"></canvas>
+
+  <nav id="hud" role="toolbar" aria-label="3. Ekran Kontrolleri">
+    <span class="badge" id="toggleHudBtn" role="button" tabindex="0" aria-label="Kontrol Çubuğunu Küçült veya Büyüt">
+      <span id="statusDot" class="dot"></span>
+      <span id="statusText" class="hud-item">Bağlanıyor...</span>
+    </span>
+    <span id="metricsText" class="hud-item" style="color: var(--muted);">0 FPS · -- ms</span>
+    <button id="modeBtn" class="hud-btn hud-item active" type="button" aria-label="Okuma veya Video Modu Değiştir">
+      Mod: Okuma
+    </button>
+    <button id="touchBtn" class="hud-btn hud-item active" type="button" aria-label="Dokunmatik Kontrolü Aç veya Kapat">
+      Dokunmatik: Açık
+    </button>
+    <button id="fullscreenBtn" class="hud-btn hud-item" type="button" aria-label="Tam Ekran Yap">
+      Tam Ekran
+    </button>
+  </nav>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("screenCanvas");
+      const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+      const hud = document.getElementById("hud");
+      const toggleHudBtn = document.getElementById("toggleHudBtn");
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const metricsText = document.getElementById("metricsText");
+      const modeBtn = document.getElementById("modeBtn");
+      const touchBtn = document.getElementById("touchBtn");
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+      let ws = null;
+      let currentMode = "reading";
+      let touchEnabled = true;
+      let frameCount = 0;
+      let currentFps = 0;
+      let rttMs = "--";
+      let wakeLockSentinel = null;
+
+      toggleHudBtn.addEventListener("click", () => {
+        hud.classList.toggle("minimized");
+      });
+      toggleHudBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          hud.classList.toggle("minimized");
+        }
+      });
+
+      async function requestWakeLock() {
+        if ("wakeLock" in navigator) {
+          try {
+            wakeLockSentinel = await navigator.wakeLock.request("screen");
+          } catch (_err) {
+            // Tarayıcı izin vermezse sessizce devam et
+          }
+        }
+      }
+
+      fullscreenBtn.addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+            fullscreenBtn.textContent = "Çıkış";
+          } else {
+            await document.exitFullscreen();
+            fullscreenBtn.textContent = "Tam Ekran";
+          }
+        } catch (_e) {}
+        requestWakeLock();
+      });
+
+      modeBtn.addEventListener("click", () => {
+        const nextMode = currentMode === "reading" ? "video" : "reading";
+        sendJson({ type: "config", mode: nextMode });
+      });
+
+      touchBtn.addEventListener("click", () => {
+        touchEnabled = !touchEnabled;
+        updateButtons();
+        sendJson({ type: "config", touch_enabled: touchEnabled });
+      });
+
+      function updateButtons() {
+        modeBtn.textContent = currentMode === "reading" ? "Mod: Okuma" : "Mod: Video";
+        modeBtn.classList.toggle("active", currentMode === "video");
+        touchBtn.textContent = touchEnabled ? "Dokunmatik: Açık" : "Dokunmatik: Kapalı";
+        touchBtn.classList.toggle("active", touchEnabled);
+      }
+
+      function sendJson(payload) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(payload));
+        }
+      }
+
+      async function renderFrame(blob) {
+        frameCount++;
+        if ("createImageBitmap" in window) {
+          const bmp = await createImageBitmap(blob);
+          if (canvas.width !== bmp.width || canvas.height !== bmp.height) {
+            canvas.width = bmp.width;
+            canvas.height = bmp.height;
+          }
+          ctx.drawImage(bmp, 0, 0);
+          bmp.close();
+        }
+      }
+
+      function connect() {
+        const proto = location.protocol === "https:" ? "wss:" : "ws:";
+        ws = new WebSocket(`${proto}//${location.host}/ws`);
+        ws.binaryType = "blob";
+
+        ws.onopen = () => {
+          statusDot.classList.add("connected");
+          statusText.textContent = "USB Bağlı";
+          requestWakeLock();
+        };
+
+        ws.onmessage = async (event) => {
+          if (event.data instanceof Blob) {
+            await renderFrame(event.data);
+            return;
+          }
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "meta") {
+              currentMode = msg.mode || "reading";
+              touchEnabled = Boolean(msg.touch_enabled);
+              statusText.textContent = `Ekran ${msg.monitor_index} (${msg.width}x${msg.height})`;
+              updateButtons();
+            } else if (msg.type === "pong" && msg.ts) {
+              rttMs = Math.max(1, Math.round(performance.now() - msg.ts));
+            }
+          } catch (_err) {}
+        };
+
+        ws.onclose = () => {
+          statusDot.classList.remove("connected");
+          statusText.textContent = "Yeniden bağlanıyor...";
+          setTimeout(connect, 1200);
+        };
+      }
+
+      setInterval(() => {
+        currentFps = frameCount;
+        frameCount = 0;
+        metricsText.textContent = `${currentFps} FPS · ${rttMs} ms`;
+        sendJson({ type: "ping", ts: performance.now() });
+      }, 1000);
+
+      // Dokunmatik ve Fare Haritalama (Etkin Görüntü Alanına Göre)
+      function getNormalizedCoords(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const canvasW = canvas.width || 1920;
+        const canvasH = canvas.height || 1080;
+        const scale = Math.min(rect.width / canvasW, rect.height / canvasH);
+        const drawnW = canvasW * scale;
+        const drawnH = canvasH * scale;
+        const offsetX = rect.left + (rect.width - drawnW) / 2;
+        const offsetY = rect.top + (rect.height - drawnH) / 2;
+
+        const normX = Math.max(0, Math.min(1, (clientX - offsetX) / Math.max(1, drawnW)));
+        const normY = Math.max(0, Math.min(1, (clientY - offsetY) / Math.max(1, drawnH)));
+        return { x: Number(normX.toFixed(4)), y: Number(normY.toFixed(4)) };
+      }
+
+      function showRipple(clientX, clientY) {
+        const el = document.createElement("div");
+        el.className = "touch-ripple";
+        el.style.left = `${clientX}px`;
+        el.style.top = `${clientY}px`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 360);
+      }
+
+      let activePointers = new Map();
+      let longPressTimer = null;
+      let startPos = null;
+      let lastMoveSent = 0;
+      let lastTwoFingerY = null;
+
+      canvas.addEventListener("pointerdown", (e) => {
+        if (!touchEnabled) return;
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (activePointers.size === 1) {
+          const pt = getNormalizedCoords(e.clientX, e.clientY);
+          startPos = { clientX: e.clientX, clientY: e.clientY, norm: pt, moved: false };
+          showRipple(e.clientX, e.clientY);
+          sendJson({ type: "touch", event: "down", x: pt.x, y: pt.y });
+
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(() => {
+            if (startPos && !startPos.moved && activePointers.size === 1) {
+              sendJson({ type: "touch", event: "up", x: pt.x, y: pt.y });
+              sendJson({ type: "touch", event: "right_tap", x: pt.x, y: pt.y });
+              startPos.rightClicked = true;
+            }
+          }, 520);
+        } else if (activePointers.size === 2) {
+          clearTimeout(longPressTimer);
+          const pts = Array.from(activePointers.values());
+          lastTwoFingerY = (pts[0].y + pts[1].y) / 2;
+        }
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (!touchEnabled || !activePointers.has(e.pointerId)) return;
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        const now = performance.now();
+        if (activePointers.size === 2 && lastTwoFingerY !== null) {
+          const pts = Array.from(activePointers.values());
+          const avgY = (pts[0].y + pts[1].y) / 2;
+          const dy = avgY - lastTwoFingerY;
+          if (Math.abs(dy) > 10 && now - lastMoveSent > 25) {
+            const center = getNormalizedCoords((pts[0].x + pts[1].x) / 2, avgY);
+            sendJson({
+              type: "touch",
+              event: "scroll",
+              x: center.x,
+              y: center.y,
+              delta_y: Math.round(dy * 3),
+            });
+            lastTwoFingerY = avgY;
+            lastMoveSent = now;
+          }
+          return;
+        }
+
+        if (activePointers.size === 1 && startPos) {
+          const dist = Math.hypot(e.clientX - startPos.clientX, e.clientY - startPos.clientY);
+          if (dist > 8) {
+            startPos.moved = true;
+            clearTimeout(longPressTimer);
+          }
+          if (now - lastMoveSent > 16) {
+            const pt = getNormalizedCoords(e.clientX, e.clientY);
+            sendJson({ type: "touch", event: "move", x: pt.x, y: pt.y });
+            lastMoveSent = now;
+          }
+        }
+      });
+
+      function endPointer(e) {
+        if (!activePointers.has(e.pointerId)) return;
+        activePointers.delete(e.pointerId);
+        clearTimeout(longPressTimer);
+
+        if (activePointers.size < 2) {
+          lastTwoFingerY = null;
+        }
+        if (activePointers.size === 0 && startPos && !startPos.rightClicked) {
+          const pt = getNormalizedCoords(e.clientX, e.clientY);
+          sendJson({ type: "touch", event: "up", x: pt.x, y: pt.y });
+          startPos = null;
+        }
+      }
+
+      canvas.addEventListener("pointerup", endPointer);
+      canvas.addEventListener("pointercancel", endPointer);
+
+      connect();
+    })();
+  </script>
+</body>
+</html>
