@@ -55,7 +55,7 @@ class DisplayTopologyResult:
 def list_monitors(raw_monitors: Sequence[dict[str, int]] | None = None) -> tuple[VirtualDesktopGeometry, list[MonitorInfo]]:
     """MSS ekran listesini ayrıştırarak sanal masaüstü ve fiziksel/sanal ekranları döndürür."""
     if raw_monitors is None:
-        with mss.mss() as sct:
+        with mss.MSS() as sct:
             raw_monitors = list(sct.monitors)
 
     if not raw_monitors:

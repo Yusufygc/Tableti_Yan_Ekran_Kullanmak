@@ -2,6 +2,10 @@
 
 Bu sayfa [[index]] kapsamında projede yapılan tüm önemli değişiklikleri en yeni kayıt en üstte olacak şekilde listeler. Kurallar için [[rules]] sayfasına bakın.
 
+## [2026-10-17] UPDATE | Bağımlılık Güvenlik Yükseltmesi (pip-audit)
+- CI `pip-audit` taramasında `pillow==11.3.0` ve `aiohttp==3.12.15` sürümlerinde bildirilen güvenlik açıkları giderildi.
+- `requirements.txt` içinde sürümler `mss==10.2.0`, `pillow==12.3.0` ve `aiohttp==3.14.5` olarak sabitlendi; `.github/workflows/ci.yml` içinde `pip-audit==2.10.1` sürümüne güncellendi.
+
 ## [2026-10-17] UPDATE | Konsolsuz Başlatma (pythonw) ve Responsive/Dinamik Arayüz Yenilemesi
 - `baslat.bat` içinde `start "" ... pythonw.exe` ve `adb_manager.py` içinde `CREATE_NO_WINDOW` kullanılarak arka planda siyah `cmd.exe` penceresinin açık kalması engellendi.
 - `src/ui/controller_app.py` sabit `680x560` boyut yerine `grid` tabanlı esnek (responsive) yerleşim, tıklanabilir görsel ekran haritası (`[1] [2] [3]`), `<Configure>` ile dinamik metin kaydırma (`wraplength`) ve `winfo_reqwidth/reqheight` tabanlı otomatik başlangıç boyutlandırmasıyla yenilendi.

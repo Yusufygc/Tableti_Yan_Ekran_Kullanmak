@@ -31,7 +31,7 @@ class MssRawGrabber:
 
     def grab_rgb(self, monitor: MonitorInfo) -> tuple[int, int, bytes]:
         if self._sct is None:
-            self._sct = mss.mss()
+            self._sct = mss.MSS()
         region = {
             "left": monitor.left,
             "top": monitor.top,
