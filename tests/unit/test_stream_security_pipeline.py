@@ -136,8 +136,35 @@ def test_status_reports_stage_timings() -> None:
                 assert status["grab_ms"] >= 0.0
                 assert status["encode_ms"] > 0.0
                 assert "send_ms" in status
+                assert "frames_dropped" in status
+                assert "quality_penalty" in status
 
     asyncio.run(_run())
+
+
+def test_quality_penalty_rises_when_frames_are_dropped_and_recovers_slowly() -> None:
+    nxt = stream_server.next_quality_penalty
+    assert nxt(0, sent=20, dropped=20) == stream_server.QUALITY_STEP_DOWN  # bağlantı yetmiyor: kalite düşer
+    assert nxt(stream_server.MAX_QUALITY_PENALTY, sent=10, dropped=40) == stream_server.MAX_QUALITY_PENALTY
+    assert nxt(10, sent=30, dropped=0) == 10 - stream_server.QUALITY_STEP_UP  # bağlantı yetiyor: yavaş toparlanır
+    assert nxt(0, sent=30, dropped=0) == 0
+    assert nxt(7, sent=0, dropped=0) == 7  # veri yok: değişmez
+    assert nxt(7, sent=30, dropped=2) == 7  # küçük kayıp oranı: tepki yok (dalgalanma önleme)
+
+
+def test_publish_frame_keeps_only_newest_unsent_frame() -> None:
+    srv = _make_server()
+    srv._publish_frame(b"eski")
+    srv._publish_frame(b"yeni")
+    assert srv._outgoing == b"yeni"
+    assert srv._frames_dropped == 1
+
+
+def test_encode_quality_uses_penalty_with_floor() -> None:
+    srv = _make_server()
+    srv.settings.jpeg_quality = 85
+    srv._quality_penalty = stream_server.MAX_QUALITY_PENALTY
+    assert max(stream_server.MIN_JPEG_QUALITY, srv.settings.jpeg_quality - srv._quality_penalty) == 70
 
 
 def test_topology_is_cached_per_monitor_index() -> None:

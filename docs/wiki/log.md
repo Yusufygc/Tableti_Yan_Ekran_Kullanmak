@@ -2,6 +2,15 @@
 
 Bu sayfa [[index]] kapsamında projede yapılan tüm önemli değişiklikleri en yeni kayıt en üstte olacak şekilde listeler. Kurallar için [[rules]] sayfasına bakın.
 
+## [2026-10-17] REVIEW | Kalite Dalgalanması: Paralel Çözme, Tam Çözünürlük ve Bağlantıya Duyarlı Kalite (`perf/otomatik-kalite-modu`)
+- Belirti (YouTube videosu oynarken): Otomatik kip tüm ekranı sürekli 1280px'te tutuyor, durağan sayfa bulanık; kısa duraklarda keskin kareye, sonra yumuşağa dönerek kalite dalgalanıyor, FPS 20-30 arasında oynuyor.
+- Kök neden bulgusu (tablet deneyi): istemci kareleri tek tek `await` ettiği için tabletin 8 çekirdeği boştaydı. `createImageBitmap` boru hattı derinliği 1 → 4 olunca 1920x1200 4:4:4 q88: 19 → 44 FPS, 4:2:0 q72: 17 → 48 FPS, 1280x800: 30 → 83 FPS. Derinlik 2-6 arası farklar küçük (4 seçildi).
+- Değişiklikler: `index.html` 4 kare paralel çözer, çizim sırayla yapılır, çözmeye başlanmamış kareler arasında yalnızca en yenisi tutulur (HUD `gecikme` artık kuyruk + çözme gecikmesi). `MODE_PRESETS` hepsi tam çözünürlük: Otomatik 4:4:4 q85/40 FPS + durulunca q92, Okuma q92/30 FPS, Video 4:2:0 q70/45 FPS (`CHROMA_444_MODES`). Küçültülmüş hareket kademesi kalktı (ayar olarak durur).
+- Sunucu: gönderim kodlamadan ayrıldı (`_sender_loop`/`_publish_frame`, en yeni kare kazanır); bağlantıya duyarlı kalite denetimi (`next_quality_penalty`: atılan kare oranı >%15 ise kalite 5 birim düşer, en fazla 15; kayıpsızken saniyede 1 birim toparlanır; taban 50). `/status`: `frames_dropped`, `quality_penalty`. Soket `SO_SNDBUF` büyütme denendi, fark etmedi ve gecikme riski taşıdığı için geri alındı.
+- Ölçüm (gerçek sunucu + sentetik ağır içerik [647-829 KB kareler], TB330FU): sınır USB ≈16-26 MB/sn (gönderim sırasında), seri kodla+gönder döngüsünde 24-26 FPS → kalite denetimiyle Otomatik 27-31, Okuma 27-28, Video 35-37 FPS; hepsi 1920px, dalgalanma yok. Gerçek ekranlar daha hafif (≈300 KB) olduğundan daha yüksek FPS beklenir; tavan USB 2.0.
+- Kritik: kullanıcının kayıtlı `settings.json` dosyası eski `scale_factor=0.667`, `jpeg_quality=72`, `target_fps=30` tutuyordu ve yeni ön ayarı eziyordu (HUD'da 1280px bu yüzden görülüyordu). `ProjectService.__init__` artık açılışta kayıtlı kipin ön ayarını uygular (kalite/FPS/ölçek arayüzden ayarlanamadığı için).
+- Testler: 45 (kalite cezası, en yeni kare kazanır, `/status` alanları, eski kayıtlı ayarın ön ayarı ezmemesi). [[decisions]] Karar 6 güncellendi, [[architecture]] ve [[testing]] güncel.
+
 ## [2026-10-17] INGEST | Otomatik Kip: Hareket Sırasında Akıcı, Ekran Durulunca Piksel Keskin (`perf/otomatik-kalite-modu`)
 - Sorun: Video kipi 1280x800 büyütülerek bulanıktı; tam çözünürlük ise tablet çözme tavanı yüzünden ≈20 FPS. Çözüm: iki kademeli akış — hareket varken 1280x800 q72 4:2:0 (≈30 FPS), ekran `SETTLE_SEC` (0,2 sn) değişmeyince tek tam çözünürlük q92 4:4:4 keskin kare.
 - `screen_capture.py`: `ScreenCapturer.acquire(adaptive=True)` durum makinesi (`_decide`), `AcquiredFrame.sharp`, keskin kare `encode` içinde tam çözünürlük/4:4:4/`SHARP_JPEG_QUALITY`. `app_settings.py`: `"auto"` ön ayarı (varsayılan kip), `SETTLE_SEC`, `SHARP_JPEG_QUALITY`.

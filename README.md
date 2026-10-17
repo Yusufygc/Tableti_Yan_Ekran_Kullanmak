@@ -18,10 +18,14 @@ Windows bilgisayarınız (1. Ekran: Harici Monitör, 2. Ekran: Laptop Ekranı) i
 
 ## Görüntü Kipleri
 
-- **Otomatik (önerilen):** Ekran hareket ederken (kaydırma, video, yazma) 1280x800 hızlı kareler (~25-30 FPS); ekran ~0,2 sn durulunca tek bir tam çözünürlük (1920x1200, 4:4:4, yüksek kalite) keskin kare gönderilir. Durağan ekranda trafik ve CPU kullanımı yoktur.
-- **Okuma:** Her zaman tam çözünürlük (keskin, ancak tabletin JPEG çözme hızı nedeniyle ~20 FPS tavanı).
-- **Video:** Her zaman 1280x800 (akıcı ~30 FPS, daha yumuşak görüntü).
-- Tablet HUD'ında `çöz … ms` tabletin kare çözme süresini, sondaki `…px` ise son karenin genişliğini (1280 = hareket, 1920 = keskin) gösterir. Mod düğmesi Otomatik → Okuma → Video sırasıyla değişir.
+Tüm kipler **tam çözünürlük** (ekranın doğal boyutu) gönderir; tablet kareleri paralel çözdüğü için küçültmeye gerek kalmaz (kare boyutu sabit kalır, kalite dalgalanmaz).
+
+- **Otomatik (önerilen):** 4:4:4 q85, hedef 40 FPS; ekran ~0,2 sn durulunca tek bir q92 kare gönderilir. Durağan ekranda trafik ve CPU kullanımı yoktur, boşta yoklama 15 FPS'e düşer.
+- **Okuma:** En yüksek kalite (4:4:4 q92, 30 FPS) — metin/kod okumak için.
+- **Video:** 4:2:0 q70, 45 FPS — daha küçük kareler, en akıcı kip.
+- **Bağlantıya duyarlı kalite:** USB 2.0 ≈20 MB/sn civarında doyarsa sunucu kareleri atmak yerine JPEG kalitesini en fazla 15 birim (küçük adımlarla) düşürür, bağlantı yetince geri yükseltir (`/status` içinde `quality_penalty`, `frames_dropped`).
+- Tablet HUD'ı: `… FPS · … ms (RTT) · gecikme … ms (kare gecikmesi) · atılan … (istemcide atılan) · …px (son karenin genişliği)`. Mod düğmesi Otomatik → Okuma → Video sırasıyla değişir.
+- **Ölçüm yöntemi (Lenovo TB330FU):** `/status` uç noktası `grab_ms`, `encode_ms`, `send_ms`, `last_fps` verir; ağır içerikte (yoğun renkli metin + gürültülü video bölgesi) Otomatik 27-31, Video 36-37 FPS ölçüldü; sınır USB bant genişliğidir.
 
 ## Gizlilik ve Ağ Güvenliği İlkeleri
 

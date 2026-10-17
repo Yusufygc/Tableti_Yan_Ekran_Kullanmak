@@ -27,6 +27,13 @@ MAX_SCROLL_DELTA = 1200
 STATS_EMA_ALPHA = 0.2
 IDLE_AFTER_SEC = 1.0  # Bu süre değişim yoksa yoklama hızı düşürülür (boşta CPU/GDI tasarrufu)
 IDLE_POLL_FPS = 15
+# Bağlantıya duyarlı kalite denetimi: kareler gönderilemeden atılıyorsa (USB/ADB bant genişliği veya yavaş istemci)
+# JPEG kalitesi küçük adımlarla düşer, bağlantı yetince yavaşça geri yükselir (testere dişi ±birkaç birim: görünmez).
+QUALITY_STEP_DOWN = 5
+QUALITY_STEP_UP = 1
+MAX_QUALITY_PENALTY = 15
+MIN_JPEG_QUALITY = 50
+DROP_RATIO_THRESHOLD = 0.15
 
 
 def default_static_dir() -> Path:
@@ -76,6 +83,21 @@ async def loopback_guard_middleware(request: web.Request, handler: Any) -> web.S
     return await handler(request)
 
 
+def next_quality_penalty(penalty: int, sent: int, dropped: int) -> int:
+    """
+    1 sn'lik pencere sonucuna göre kalite cezasını günceller.
+    Atılan kare oranı eşiği aşarsa ceza artar (kalite düşer); hiç kare atılmadıysa yavaşça azalır.
+    """
+    total = sent + dropped
+    if total == 0:
+        return penalty
+    if dropped / total > DROP_RATIO_THRESHOLD:
+        return min(MAX_QUALITY_PENALTY, penalty + QUALITY_STEP_DOWN)
+    if dropped == 0:
+        return max(0, penalty - QUALITY_STEP_UP)
+    return penalty
+
+
 class StreamServer:
     """Yerel HTTP + Binary WebSocket 3. ekran yayın sunucusu."""
 
@@ -107,6 +129,10 @@ class StreamServer:
         self._encode_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TabScreenEncode")
         self._topology_cache: tuple[float, int, DisplayTopologyResult] | None = None
         self._last_activity = time.monotonic()
+        self._outgoing: bytes | None = None  # Gönderilmeyi bekleyen en yeni kare (eskisi atılır)
+        self._outgoing_ready = asyncio.Event()
+        self._frames_dropped = 0
+        self._quality_penalty = 0
         self._stats: dict[str, float] = {"grab_ms": 0.0, "encode_ms": 0.0, "send_ms": 0.0}
 
     @property
@@ -178,6 +204,8 @@ class StreamServer:
             "grab_ms": round(self._stats["grab_ms"], 1),
             "encode_ms": round(self._stats["encode_ms"], 1),
             "send_ms": round(self._stats["send_ms"], 1),
+            "frames_dropped": self._frames_dropped,
+            "quality_penalty": self._quality_penalty,
         }
         return web.json_response(payload)
 
@@ -291,11 +319,12 @@ class StreamServer:
 
     async def _encode_frame(self, acquired: AcquiredFrame) -> CaptureFrame:
         loop = asyncio.get_running_loop()
+        quality = max(MIN_JPEG_QUALITY, self.settings.jpeg_quality - self._quality_penalty)
         return await loop.run_in_executor(
             self._encode_pool,
             lambda: self.capturer.encode(
                 acquired,
-                quality=self.settings.jpeg_quality,
+                quality=quality,
                 scale_factor=self.settings.scale_factor,
                 mode=self.settings.mode,
             ),
@@ -319,12 +348,46 @@ class StreamServer:
             fps = min(fps, IDLE_POLL_FPS)
         return 1.0 / fps
 
-    async def _broadcast_loop(self) -> None:
-        """İki aşamalı hat: N. kare kodlanıp gönderilirken N+1. kare yakalama thread'inde yakalanır."""
+    async def _sender_loop(self) -> None:
+        """3. aşama: en yeni kodlanmış kareyi istemcilere gönderir; yavaş bağlantıda ara kareler atılır."""
         fps_window_start = time.monotonic()
         frames_in_window = 0
+        dropped_at_window_start = self._frames_dropped
+        while not self._stopping:
+            await self._outgoing_ready.wait()
+            self._outgoing_ready.clear()
+            data, self._outgoing = self._outgoing, None
+            if data is None:
+                continue
+            send_start = time.perf_counter()
+            await self._send_frame(data)
+            self._record_stat("send_ms", (time.perf_counter() - send_start) * 1000.0)
+            self._frames_sent += 1
+            frames_in_window += 1
+
+            now = time.monotonic()
+            elapsed_window = now - fps_window_start
+            if elapsed_window >= 1.0:
+                self._last_fps = frames_in_window / elapsed_window
+                self._quality_penalty = next_quality_penalty(
+                    self._quality_penalty, frames_in_window, self._frames_dropped - dropped_at_window_start
+                )
+                dropped_at_window_start = self._frames_dropped
+                fps_window_start = now
+                frames_in_window = 0
+
+    def _publish_frame(self, jpeg_bytes: bytes) -> None:
+        """Kodlanan kareyi gönderici için bırakır; gönderilmemiş eski kare varsa üzerine yazılır (en yeni kazanır)."""
+        if self._outgoing is not None:
+            self._frames_dropped += 1
+        self._outgoing = jpeg_bytes
+        self._outgoing_ready.set()
+
+    async def _broadcast_loop(self) -> None:
+        """Üç aşamalı hat: yakalama (thread) -> kodlama (thread) -> gönderim (event loop); aşamalar üst üste biner."""
         started_at = time.monotonic()
         pending: asyncio.Future[AcquiredFrame] = asyncio.ensure_future(self._grab_next(0.0))
+        sender = asyncio.ensure_future(self._sender_loop())
 
         try:
             while not self._stopping and self._clients:
@@ -347,20 +410,11 @@ class StreamServer:
                     frame = await self._encode_frame(acquired)
                     if frame.jpeg_bytes:
                         self._record_stat("encode_ms", frame.encode_ms)
-                        send_start = time.perf_counter()
-                        await self._send_frame(frame.jpeg_bytes)
-                        self._record_stat("send_ms", (time.perf_counter() - send_start) * 1000.0)
-                        self._frames_sent += 1
-                        frames_in_window += 1
-
-                now = time.monotonic()
-                elapsed_window = now - fps_window_start
-                if elapsed_window >= 1.0:
-                    self._last_fps = frames_in_window / elapsed_window
-                    fps_window_start = now
-                    frames_in_window = 0
+                        self._publish_frame(frame.jpeg_bytes)
         finally:
             pending.cancel()
+            sender.cancel()
+            self._outgoing = None
 
     async def start(self) -> None:
         """Sunucuyu 127.0.0.1 üzerinde başlatır."""

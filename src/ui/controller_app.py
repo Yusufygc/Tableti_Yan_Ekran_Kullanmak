@@ -265,7 +265,7 @@ class ControllerWindow:
         style = self._choice_style()
         tk.Radiobutton(
             card,
-            text="Otomatik (Önerilen): hareket varken akıcı, ekran durulunca piksel keskin",
+            text="Otomatik (Önerilen): tam çözünürlük, akıcı; ekran durulunca en yüksek kalite",
             variable=self.mode_var,
             value="auto",
             **style,
@@ -273,7 +273,7 @@ class ControllerWindow:
 
         tk.Radiobutton(
             card,
-            text="Okuma / Kod Modu (Hep Tam Çözünürlük, ~20 FPS)",
+            text="Okuma / Kod Modu (En Yüksek Kalite, 30 FPS)",
             variable=self.mode_var,
             value="reading",
             **style,
@@ -281,7 +281,7 @@ class ControllerWindow:
 
         tk.Radiobutton(
             card,
-            text="Video / Akıcı Mod (Hep 1280x800, ~30 FPS)",
+            text="Video / Akıcı Mod (Daha Küçük Kareler, 45 FPS)",
             variable=self.mode_var,
             value="video",
             **style,

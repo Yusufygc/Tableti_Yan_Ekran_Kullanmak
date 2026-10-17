@@ -43,6 +43,8 @@ class ProjectService:
     ) -> None:
         logging_config.setup_logging()
         self._settings = app_settings.load_settings()
+        # Kalite/FPS/ölçek arayüzden ayarlanamaz; kayıtlı eski ön ayarlar (ör. küçültülmüş ölçek) yeni ön ayarı ezmesin.
+        app_settings.apply_mode_preset(self._settings, self._settings.mode)
         self._adb = adb_mgr or adb_manager.AdbManager()
         self._capturer = capturer or screen_capture.ScreenCapturer()
         self._injector = injector or input_injector.TouchInputInjector(enabled=self._settings.touch_enabled)

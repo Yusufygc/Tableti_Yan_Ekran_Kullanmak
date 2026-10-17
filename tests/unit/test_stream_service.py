@@ -129,3 +129,21 @@ def test_project_service_facade_preferences_and_snapshot() -> None:
     assert snap.is_running is False
     assert snap.mode == "video"
     assert snap.touch_enabled is False
+
+
+def test_project_service_reapplies_mode_preset_over_stale_saved_values() -> None:
+    # Eski sürümden kalan kayıtlı değerler (küçültülmüş ölçek, düşük kalite) yeni ön ayarı ezmemeli
+    stale = app_settings.AppSettings(mode="auto", jpeg_quality=72, scale_factor=2 / 3, target_fps=30)
+    app_settings.save_settings(stale)
+
+    svc = project_service.ProjectService(
+        capturer=screen_capture.ScreenCapturer(grabber=_FakeGrabber()),
+        injector=input_injector.TouchInputInjector(sender=lambda _cmd: None, enabled=True),
+    )
+    preset_quality, preset_fps, preset_scale = app_settings.MODE_PRESETS["auto"]
+    assert svc.settings.mode == "auto"
+    assert (svc.settings.jpeg_quality, svc.settings.target_fps, svc.settings.scale_factor) == (
+        preset_quality,
+        preset_fps,
+        preset_scale,
+    )

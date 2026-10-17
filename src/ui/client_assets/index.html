@@ -214,39 +214,57 @@
         }
       }
 
-      // Yalnızca en son kare çözülür: tablet yavaşlarsa eski kareler atılır, gecikme birikmez.
-      let pendingBlob = null;
-      let decoding = false;
+      // Boru hattı: aynı anda DECODE_DEPTH kare paralel çözülür, çizim sırayla yapılır. Tek tek beklemek
+      // (await) tabletin çok çekirdeğini boşta bırakıyordu: TB330FU'da 1920x1200 4:4:4 q88 için 19 FPS -> 44 FPS.
+      // Çözmeye henüz başlanmamış kareler arasında yalnızca en yenisi tutulur (gecikme birikmez).
+      const DECODE_DEPTH = 4;
+      const inflight = [];
+      let waitingBlob = null;
+      let draining = false;
 
-      async function pumpFrames() {
-        if (decoding) return;
-        decoding = true;
+      function startDecodes() {
+        while (waitingBlob && inflight.length < DECODE_DEPTH) {
+          const blob = waitingBlob;
+          waitingBlob = null;
+          // Seçenek verme: createImageBitmap seçenekleri TB330FU'da çözmeyi %30 yavaşlatıyor.
+          inflight.push({ promise: createImageBitmap(blob), t0: performance.now() });
+        }
+      }
+
+      async function drainFrames() {
+        if (draining) return;
+        draining = true;
         try {
-          while (pendingBlob) {
-            const blob = pendingBlob;
-            pendingBlob = null;
-            const t0 = performance.now();
-            const bmp = await createImageBitmap(blob); // seçenek verme: TB330FU'da çözmeyi %30 yavaşlatıyor
-            // Canvas sabit (ekranın doğal boyutu); küçültülmüş hareket kareleri ve tam boyutlu keskin kareler
-            // aynı yüzeye çizilir, böylece boyut değişiminde canvas sıfırlanıp titremez.
-            ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-            lastBitmapWidth = bmp.width;
-            bmp.close();
-            const dt = performance.now() - t0;
-            decodeMsAvg = decodeMsAvg === 0 ? dt : decodeMsAvg + 0.2 * (dt - decodeMsAvg);
-            frameCount++;
+          while (inflight.length) {
+            const item = inflight[0];
+            let bmp = null;
+            try {
+              bmp = await item.promise;
+            } catch (_err) {
+              // Bozuk kare: atla, sonraki kare ile devam et
+            }
+            inflight.shift();
+            if (bmp) {
+              // Canvas sabit (ekranın doğal boyutu); farklı boyutlu kareler aynı yüzeye ölçeklenerek çizilir.
+              ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+              lastBitmapWidth = bmp.width;
+              bmp.close();
+              const dt = performance.now() - item.t0; // kare gecikmesi (kuyruk + çözme)
+              decodeMsAvg = decodeMsAvg === 0 ? dt : decodeMsAvg + 0.2 * (dt - decodeMsAvg);
+              frameCount++;
+            }
+            startDecodes();
           }
-        } catch (_err) {
-          // Bozuk kare: atla, sonraki kare ile devam et
         } finally {
-          decoding = false;
+          draining = false;
         }
       }
 
       function enqueueFrame(blob) {
-        if (pendingBlob) droppedCount++;
-        pendingBlob = blob;
-        pumpFrames();
+        if (waitingBlob) droppedCount++;
+        waitingBlob = blob;
+        startDecodes();
+        drainFrames();
       }
 
       function connect() {
@@ -300,7 +318,7 @@
         const dropped = droppedCount;
         droppedCount = 0;
         metricsText.textContent =
-          `${currentFps} FPS · ${rttMs} ms · çöz ${decodeMsAvg.toFixed(0)} ms · atılan ${dropped} · ${lastBitmapWidth}px`;
+          `${currentFps} FPS · ${rttMs} ms · gecikme ${decodeMsAvg.toFixed(0)} ms · atılan ${dropped} · ${lastBitmapWidth}px`;
         sendJson({ type: "ping", ts: performance.now() });
       }, 1000);
 

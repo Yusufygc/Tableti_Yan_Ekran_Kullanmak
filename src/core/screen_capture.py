@@ -20,6 +20,9 @@ from src.core.display_manager import MonitorInfo
 
 logger = logging.getLogger(__name__)
 
+# 4:4:4 (tam renk çözünürlüğü, keskin metin) kullanan kipler; "video" 4:2:0 ile daha küçük kare üretir.
+CHROMA_444_MODES = ("reading", "auto", "sharp")
+
 
 @dataclass(frozen=True)
 class RawFrame:
@@ -210,7 +213,7 @@ def encode_frame_to_jpeg(
     if clamped_scale < 0.999:
         image = _scale_image(image, clamped_scale)
 
-    subsampling = 0 if mode in ("reading", "sharp") else 2
+    subsampling = 0 if mode in CHROMA_444_MODES else 2
 
     buf = io.BytesIO()
     image.save(buf, format="JPEG", quality=clamped_quality, subsampling=subsampling, optimize=False)

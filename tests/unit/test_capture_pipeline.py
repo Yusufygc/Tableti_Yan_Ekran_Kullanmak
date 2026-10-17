@@ -81,7 +81,7 @@ def test_mode_presets_are_single_source_of_truth() -> None:
         "video",
         *app_settings.MODE_PRESETS["video"],
     )
-    assert cfg.scale_factor < 1.0  # video: tablet çözme tavanı için küçültülür
+    assert cfg.target_fps > app_settings.MODE_PRESETS["reading"][1]  # video: daha yüksek FPS
     assert app_settings.apply_mode_preset(cfg, "reading") is True
     assert cfg.jpeg_quality == app_settings.MODE_PRESETS["reading"][0]
     assert cfg.scale_factor == 1.0  # okuma: tam çözünürlük

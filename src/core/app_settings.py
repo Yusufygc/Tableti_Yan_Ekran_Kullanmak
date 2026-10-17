@@ -17,21 +17,23 @@ class AppSettings:
     monitor_index: int = 3
     host: str = "127.0.0.1"
     port: int = 8765
-    target_fps: int = 30
-    jpeg_quality: int = 72
-    scale_factor: float = 2 / 3
+    target_fps: int = 40
+    jpeg_quality: int = 85
+    scale_factor: float = 1.0
     touch_enabled: bool = True
     mode: str = "auto"  # "auto", "reading" veya "video"
 
 
 # Mod -> (jpeg_quality, target_fps, scale_factor). Tek kaynak: sunucu ve servis aynı ön ayarı kullanır.
-# Ölçüm (Lenovo TB330FU, Chrome): JPEG çözme 1920x1200'de ≈47-51 ms (≈20 FPS tavan), 1280x800'de ≈30 ms (30 FPS).
-# Otomatik: hareket varken 1280x800 (akıcı), ekran durulunca tek tam çözünürlük keskin kare (kalite + FPS birlikte).
-# Okuma: her zaman tam çözünürlük (keskin, ≈20 FPS tavan). Video: her zaman 1280x800 (akıcı).
+# Ölçüm (Lenovo TB330FU, Chrome): tek tek (seri) JPEG çözme 1920x1200'de ≈50 ms (≈20 FPS), ama istemci 4 kareyi
+# paralel çözünce (boru hattı) 4:4:4 q88 için ≈44 FPS. Bu yüzden tüm kipler tam çözünürlüktür; tavanı artık
+# PC'deki ekran yakalama (≈20 ms, ≈47 FPS) belirler.
+# Otomatik: tam çözünürlük 4:4:4 q85 + ekran durulunca tek q92 kare. Okuma: en yüksek kalite (q92, 30 FPS).
+# Video: 4:2:0 q70, 45 FPS (daha küçük kareler, daha yüksek akıcılık).
 MODE_PRESETS: dict[str, tuple[int, int, float]] = {
-    "auto": (72, 30, 2 / 3),
-    "reading": (88, 30, 1.0),
-    "video": (72, 30, 2 / 3),
+    "auto": (85, 40, 1.0),
+    "reading": (92, 30, 1.0),
+    "video": (70, 45, 1.0),
 }
 
 # Otomatik kip: ekran bu süre değişmeyince tam çözünürlük keskin kare gönderilir (4:4:4, yüksek kalite).

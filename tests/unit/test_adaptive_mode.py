@@ -108,7 +108,8 @@ def test_non_adaptive_modes_keep_keyframe_behavior(clock: list[float]) -> None:
 
 def test_sharp_frame_is_full_resolution_444_and_motion_frame_is_scaled(clock: list[float]) -> None:
     cap = _capturer(_MutableGrabber())
-    quality, _, scale = app_settings.MODE_PRESETS["auto"]
+    quality = app_settings.MODE_PRESETS["auto"][0]
+    scale = 2 / 3  # küçültülmüş hareket kademesi (kullanıcı ayarıyla seçilebilir); ön ayar artık 1.0
 
     motion = cap.encode(cap.acquire(MON, adaptive=True), quality=quality, scale_factor=scale, mode="auto")
     assert (motion.width, motion.height) == (128, 80)  # 2/3 küçültme
@@ -133,5 +134,6 @@ def test_auto_preset_and_defaults() -> None:
     cfg = app_settings.AppSettings()
     assert cfg.mode == "auto"
     assert app_settings.apply_mode_preset(cfg, "auto") is True
-    assert cfg.scale_factor < 1.0  # hareket kademesi küçültülür; keskin kare tam çözünürlükte gider
+    assert cfg.scale_factor == 1.0  # tablet paralel çözme ile tam çözünürlüğü taşır
     assert app_settings.SHARP_JPEG_QUALITY > cfg.jpeg_quality
+    assert "auto" in screen_capture.CHROMA_444_MODES  # hareket kademesi de 4:4:4: keskin kareye geçişte renk dalgalanması yok
