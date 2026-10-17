@@ -1,6 +1,6 @@
 # TabScreen USB — Android Tableti USB ile 3. Ekran Olarak Kullanma Aracı
 
-![Sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.1.0-38BDF8)
+![Sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.1.1-38BDF8)
 
 **TabScreen USB**, Windows bilgisayarınız (**1. Ekran:** Harici Ana Monitör, **2. Ekran:** Laptop Ekranı) ile Android tabletiniz arasında **yalnızca USB kablosu üzerinden**, üçüncü taraf bulut veya telemetri sunucularına hiçbir veri göndermeden **%100 yerel (`127.0.0.1` loopback)** çalışan, dokunmatik ve fare imleci destekli bir **3. Ekran (Genişletilmiş Masaüstü / Extended Display)** yazılımıdır.
 
