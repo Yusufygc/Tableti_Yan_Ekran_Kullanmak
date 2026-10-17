@@ -11,5 +11,6 @@ htmlcov/
 .coverage
 logs/
 *.log
-tools/
-
+# Yerel, kopyalanmış eski araçlar (yayına giren kopyalar third_party/ altındadır)
+tools/platform-tools/
+tools/vdd/

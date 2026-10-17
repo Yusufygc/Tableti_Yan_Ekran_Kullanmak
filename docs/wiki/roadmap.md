@@ -24,3 +24,11 @@ Bu sayfa [[index]] kapsamında projenin aşamalarını takip eder. Mimari detayl
 - [x] `src/ui/controller_app.py`, `main.py` ve `baslat.bat`: Ekran seçimi, ADB tünel durumu ve başlat/durdur kontrol paneli.
 - [x] `tests/unit/test_ui_contrast.py`: WCAG AA (>= 4.5:1) kontrast, çevrimdışı HTML ve erişilebilirlik bekçi testleri.
 - [x] 3. Sanal Ekran (VDD) kurulum/kontrol yardımcısı (`DisplaySwitch.exe /extend` + `README.md` rehberi).
+
+## Aşama 5: Exe Dağıtımı, Sürüm Yayını ve Uygulama İçi Güncelleme (Kod Tamam; İlk Release Bekliyor)
+- [x] Simgeler: `packaging/icons/make_icons.py` (10 PNG boyutu + çok çerçeveli `app.ico`), exe/kurulum/pencere/tablet sekmesinde kullanım.
+- [x] Kararlı exe: `packaging/launcher.py`, sabit sürüm kaynağı, `build_exe.py` özet kapısı (`packaging/launcher.sha256`), farklı kök + değişen sürümle aynı özet doğrulandı ([[exe-dagitim-rehberi]]).
+- [x] Kurulum: `packaging/TabScreenUSB.iss`, `build_installer.py`, `build_verify.py` (gerçek kayıt korumalı deneme).
+- [x] Yayın: `tools/release.py`, `.github/workflows/release.yml` ([[surum-yayinlama]]).
+- [x] Güncelleme: `update_service`, `UpdateViewModel`, `UpdateDialog.qml` ([[guncelleme-sistemi]]).
+- [ ] `main` dalına birleştirme, ilk etiket (`v0.1.0`), CI'da derlenen exe özetinin yerelle aynı çıktığının ve SAC'lı makinede açıldığının doğrulanması, `0.1.0 → 0.1.1` uçtan uca güncelleme denemesi.

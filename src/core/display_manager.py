@@ -11,6 +11,8 @@ from typing import Callable, Sequence
 
 import mss
 
+from src.core import app_paths
+
 logger = logging.getLogger(__name__)
 
 
@@ -164,7 +166,7 @@ def install_virtual_display_windows(
     runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
 ) -> bool:
     """Proje kökündeki 3_ekran_kur.bat betiğini (UAC yönetici onayıyla) çalıştırarak 3. sanal ekranı kurar."""
-    script_path = Path(__file__).resolve().parents[2] / "3_ekran_kur.bat"
+    script_path = app_paths.resource_root() / "3_ekran_kur.bat"
     if not script_path.is_file():
         logger.warning("3_ekran_kur.bat bulunamadı: %s", script_path)
         return False

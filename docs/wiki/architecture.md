@@ -22,7 +22,8 @@ Kod tabanı [[rules]] uyarınca sıkı bir şekilde 3 katmana ayrılmıştır (`
   - `project_service.py`: Tüm alt servisleri tek bir cephede (Facade) birleştiren ana servis.
 - **`src/ui/` (Üst Katman):**
   - `client_assets/`: Android tablette tam ekran çalışan HTML5 Canvas + Pointer Events istemcisi.
-  - `controller_app.py`: Windows tarafında ekran seçimi, tünel durumu ve başlat/durdur kontrol arayüzü.
+  - `controller_app.py`: PySide6 `ControllerViewModel(QObject)` reaktif veri köprüsü ve ağır işlemleri UI thread dışında yürüten `_BackgroundTaskWorker(QThread)` sarmalayıcısı.
+  - `qml/Main.qml`: Responsive, WCAG AA kontrastlı, klavye odak halkalı (`activeFocusOnTab`) ve `QAccessible` uyumlu modern QML masaüstü arayüzü.
 
 ## 3. Yayın Hattı (Pipeline) ve Güvenlik Sınırı
 - **Üç aşama:** yakalama (thread) → kodlama (thread) → gönderim (`_sender_loop`, event loop); aşamalar üst üste biner ve gönderilmemiş eski kare yeni kareyle değiştirilir (en yeni kazanır, `frames_dropped`). `next_quality_penalty` atılan kare oranına göre JPEG kalitesini ayarlar (USB bant genişliği tavanı).
@@ -31,3 +32,9 @@ Kod tabanı [[rules]] uyarınca sıkı bir şekilde 3 katmana ayrılmıştır (`
 - **Otomatik kip:** `ScreenCapturer.acquire(adaptive=True)` her imza değişiminde hareket karesi (küçük, hızlı) üretir; ekran `SETTLE_SEC` değişmeyince tek `sharp` kare (tam çözünürlük, 4:4:4, `SHARP_JPEG_QUALITY`) üretir ve durağanken başka kare göndermez. Değişim olmadan 1 sn sonra yoklama `IDLE_POLL_FPS` (15) hızına iner ([[decisions]] Karar 6).
 - **İstemci:** 4 kare paralel çözülür (`DECODE_DEPTH`), çizim sırayla yapılır; çözmeye başlanmamış kareler arasında yalnızca en yenisi tutulur; `4001` kapanış kodu "başka oturum açıldı" demektir ve yeniden bağlanma yapılmaz. Canvas sabit boyutludur (ekranın doğal çözünürlüğü); küçük hareket kareleri ve tam boyutlu keskin kareler aynı yüzeye ölçeklenerek çizilir.
 - **Güvenlik:** `loopback_guard_middleware` `Host` ve `Origin` başlıklarını doğrular (DNS rebinding ve tarayıcıdan çapraz kaynak erişimi → 403). Mod ön ayarları (`MODE_PRESETS`) `app_settings.py` içinde tek kaynaktır.
+
+## 4. Dağıtım ve Paketleme
+- `src/app.py` uygulama girişidir (`parse_args`, `run_cli`, `main`, `run`); `main.py` ince bir sarmalayıcıdır. Paketlenmiş exe'nin sabit başlatıcısı (`packaging/launcher.py`) yalnızca `src.app.run()` çağırır, tüm mantık `.pyc` olarak exe dışında durur ([[exe-dagitim-rehberi]]).
+- `src/core/app_paths.py`: `resource_root()` (geliştirme: depo kökü; paketlenmiş: PyInstaller `_internal`), `user_data_dir()` (`~/.tabscreen_usb`, `TABSCREEN_USB_HOME` ile değiştirilebilir), `icon_path()`. İstemci HTML'i, adb, VDD, `.bat` dosyaları ve simge bu kökten bulunur.
+- Güncelleme: `src/services/update_service.py` (UI'dan bağımsız), `ProjectService` cephesi, `src/ui/update_viewmodel.py` + `UpdateDialog.qml` ([[guncelleme-sistemi]]).
+- Yayın araçları depo kökündedir: `build_exe.py`, `build_installer.py`, `build_verify.py`, `packaging/`, `tools/release.py`, `.github/workflows/release.yml` ([[surum-yayinlama]]). Üçüncü taraf ikililer: `third_party/`.

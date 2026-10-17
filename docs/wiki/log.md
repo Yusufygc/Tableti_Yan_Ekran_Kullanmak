@@ -2,6 +2,24 @@
 
 Bu sayfa [[index]] kapsamında projede yapılan tüm önemli değişiklikleri en yeni kayıt en üstte olacak şekilde listeler. Kurallar için [[rules]] sayfasına bakın.
 
+## [2026-10-17] INGEST | Exe Dağıtımı, Sürüm Yayını ve Uygulama İçi Güncelleme Sistemi (Prod Hazırlığı Rehberlerine Göre)
+- Kaynaklar: `D002-HazirPromptlar/Prod hazırlığı/` altındaki üç rehber (exe dağıtımı, güncelleme sistemi, sürüm yayınlama). Bu projeye uyarlandı: PySide6/QML yığını, `TabScreenUSB` adı, `Yusufygc/Tableti_Yan_Ekran_Kullanmak` deposu. Yeni sayfalar: [[exe-dagitim-rehberi]], [[surum-yayinlama]], [[guncelleme-sistemi]]; [[decisions]] Karar 8, [[roadmap]] Aşama 5.
+- Simgeler: `packaging/icons/make_icons.py` ile 16-512 px PNG (10 boyut) ve 7 çerçeveli `app.ico`; tasarım: tablet + dokunma dalgası + amber "3" rozeti; tablet web sekmesi için `icon-192.png` ve `/icon-192.png` rotası.
+- Kararlı exe: `packaging/launcher.py`, `launcher_version_info.txt`, `build_exe.py` (özet kapısı, `packaging/launcher.sha256` = `82d57543…f44b`). Ölçüm: yeniden derleme, farklı kök ve `__version__ = 9.9.9` ile aynı özet; exe 8 sn çalıştı, pencere başlığı doğru (QML paketlenmişte yüklendi).
+- Kurulum: `packaging/TabScreenUSB.iss`, `build_installer.py`, `build_verify.py` (gerçek kaydı yedekleyen sessiz kurulum + kaldırıcı denemesi). Tam akış başarılı: `TabScreenUSB-Setup-0.1.0.exe` 46,7 MB.
+- Yol çözümleme: `src/core/app_paths.py`; `src/app.py` (`run()`), `main.py` ince sarmalayıcı; adb `third_party` içinden önce aranır; `3_ekran_*.bat` `third_party\vdd` yolunu kullanır; `third_party/` (adb + VDD + lisanslar, ≈11 MB) repoya eklendi, `THIRD_PARTY_NOTICES.md` genişletildi.
+- Güncelleme: `update_service` (güvenlik kuralları), `ProjectService` cephesi, `UpdateViewModel`, `UpdateDialog.qml`, panelde "4. Güncellemeler" kartı; açılış denetimi `ControllerWindow.run()` içinde 3 sn sonra.
+- Yayın: `tools/release.py` (itmez), `.github/workflows/release.yml`; `.gitignore` `tools/` yerine yerel kopyaları dışlar; `requirements-build.txt` PyInstaller 6.22.3.
+- Testler 47 → 95 (`test_release_packaging`, `test_build_verify`, `test_update_service`, `test_update_viewmodel`). **Doğrulanmadı:** SAC'lı makinede açılış (bu makinede SAC kapalı), CI'da derlenen exe özetinin yerelle eşitliği, gerçek Release ile uçtan uca güncelleme (henüz etiket itilmedi).
+
+## [2026-10-17] UPDATE | Kapsamlı README, Sıfırdan PySide6/QML Masaüstü Arayüzü, Çoklu Monitör Merkezleme ve Bağımlılık Temizliği
+- `README.md` projenin uçtan uca çalışma mantığını (3 ekranlı sanal masaüstü, USB ADB reverse tüneli, 3 aşamalı `acquire -> encode -> send` boru hattı, `auto` kip ve `DECODE_DEPTH=4` paralel çözme, `MOUSEEVENTF_VIRTUALDESK` dokunmatik enjeksiyonu ve güvenlik mimarisi) anlatacak şekilde baştan yazıldı.
+- Eski Tkinter arayüzü tamamen kaldırılarak `src/ui/controller_app.py` (`ControllerViewModel`, `_BackgroundTaskWorker(QThread)`) ve `src/ui/qml/Main.qml` ile sıfırdan **PySide6 + QML** arayüzü kuruldu; `THIRD_PARTY_NOTICES.md` ve `test_no_legacy_tkinter_imports` AST bekçisi eklendi.
+- `requirements.txt` içinde tam `PySide6` meta-paketi (kullanılmayan `WebEngine`/`Pdf`/`Addons` ~250 MB) yerine yalnızca QML/Quick için gerekli olan hafif `PySide6-Essentials==6.12.0` sabitlendi; `venv` içinden gereksiz eklenti paketleri temizlendi ([[decisions]] Karar 7).
+- Çoklu monitörlü (negatif koordinatlı sol monitör + ana ekran + sanal 3. ekran) kurulumda pencerenin ekran dışında veya sanal ekranda açılması sorunu `_center_and_show_on_primary_screen` ile giderildi (`app.primaryScreen().availableGeometry()` içine sığdırılıp tam ortalanarak açılır).
+- Monitör boyutuna göre QML kartlarının bozulması/sündürülmesi sorunu giderildi: `ScrollView` + `anchors.fill: parent` döngüsel yükseklik bağlaması kaldırılıp doğrudan `Flickable` + üstten bağlı `ColumnLayout` (`maxWidth: 1020px`, ortalanmış) ve `isCompact` (`width < 740`) `GridLayout` (`columns: isCompact ? 1 : 3`) kırılımı eklendi.
+- `tests/conftest.py` (`QT_QPA_PLATFORM=offscreen`, `QT_QPA_FONTDIR`) ve `tests/unit/test_ui_contrast.py` (`QAccessibleInterface`, ana ekran merkezleme, `640x540`/`860x660`/`1600x1000` esnek yerleşim ve ViewModel köprüsü) güncellendi.
+
 ## [2026-10-17] REVIEW | Kalite Dalgalanması: Paralel Çözme, Tam Çözünürlük ve Bağlantıya Duyarlı Kalite (`perf/otomatik-kalite-modu`)
 - Belirti (YouTube videosu oynarken): Otomatik kip tüm ekranı sürekli 1280px'te tutuyor, durağan sayfa bulanık; kısa duraklarda keskin kareye, sonra yumuşağa dönerek kalite dalgalanıyor, FPS 20-30 arasında oynuyor.
 - Kök neden bulgusu (tablet deneyi): istemci kareleri tek tek `await` ettiği için tabletin 8 çekirdeği boştaydı. `createImageBitmap` boru hattı derinliği 1 → 4 olunca 1920x1200 4:4:4 q88: 19 → 44 FPS, 4:2:0 q72: 17 → 48 FPS, 1280x800: 30 → 83 FPS. Derinlik 2-6 arası farklar küçük (4 seçildi).

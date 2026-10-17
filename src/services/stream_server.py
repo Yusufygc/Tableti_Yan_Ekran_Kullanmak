@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 from aiohttp import WSMsgType, web
 
+from src.core import app_paths
 from src.core.app_settings import AppSettings, apply_mode_preset
 from src.core.display_manager import DisplayTopologyResult, inspect_topology
 from src.core.input_injector import TouchInputInjector
@@ -38,7 +39,7 @@ DROP_RATIO_THRESHOLD = 0.15
 
 def default_static_dir() -> Path:
     """Varsayılan tablet web istemcisi klasörünü döndürür."""
-    return Path(__file__).resolve().parents[1] / "ui" / "client_assets"
+    return app_paths.resource_root() / "src" / "ui" / "client_assets"
 
 
 def validate_loopback_host(host: str) -> str:
@@ -162,6 +163,7 @@ class StreamServer:
         app = web.Application(middlewares=[loopback_guard_middleware])
         app.router.add_get("/", self._handle_index)
         app.router.add_get("/status", self._handle_status)
+        app.router.add_get("/icon-192.png", self._handle_icon)
         app.router.add_get("/ws", self._handle_ws)
         app.on_cleanup.append(self._on_cleanup)
         return app
@@ -182,6 +184,12 @@ class StreamServer:
             return web.Response(text="İstemci dosyası (index.html) bulunamadı.", status=404)
         html = index_file.read_text(encoding="utf-8")
         return web.Response(text=html, content_type="text/html", charset="utf-8")
+
+    async def _handle_icon(self, _request: web.Request) -> web.StreamResponse:
+        icon_file = self.static_dir / "icon-192.png"
+        if not icon_file.is_file():
+            return web.Response(status=404)
+        return web.Response(body=icon_file.read_bytes(), content_type="image/png")
 
     async def _handle_status(self, _request: web.Request) -> web.Response:
         topo = self.current_topology()

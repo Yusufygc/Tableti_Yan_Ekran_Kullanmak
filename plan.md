@@ -63,6 +63,7 @@ P029-Tablet_Ekrani_Kullanimi/
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── requirements-build.txt
+├── THIRD_PARTY_NOTICES.md
 ├── docs/
 │   └── wiki/
 │       ├── index.md          # Tüm wiki'nin içerik haritası
@@ -87,10 +88,12 @@ P029-Tablet_Ekrani_Kullanimi/
 │   │   ├── __init__.py
 │   │   ├── stream_server.py  # aiohttp yerel WebSocket yayın ve dokunmatik alıcı
 │   │   └── project_service.py# UI ve CLI için tek cephe (Facade) servisi
-│   └── ui/                   # Üst katman (Web istemcisi + Masaüstü kontrol paneli)
+│   └── ui/                   # Üst katman (Web istemcisi + PySide6/QML masaüstü kontrol paneli)
 │       ├── __init__.py
 │       ├── client_assets/    # Tablette çalışacak tam ekran HTML5/JS/CSS istemcisi
-│       └── controller_app.py # Windows tarafı durum, ekran seçimi ve başlat/durdur paneli
+│       ├── qml/
+│       │   └── Main.qml      # PySide6/QML reaktif ve esnek masaüstü arayüzü
+│       └── controller_app.py # ViewModel (QObject), QThread işçileri ve QGuiApplication sarmalayıcısı
 └── tests/
     ├── conftest.py           # Kullanıcı verisi ve log yalıtımı (autouse)
     └── unit/

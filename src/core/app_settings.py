@@ -7,6 +7,8 @@ import json
 import logging
 from pathlib import Path
 
+from src.core import app_paths
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,7 +55,7 @@ def apply_mode_preset(settings: AppSettings, mode: str) -> bool:
 
 def settings_path() -> Path:
     """Ayar dosyasının yolunu döndürür (testlerde conftest ile yalıtılır)."""
-    return Path.home() / ".tabscreen_usb" / "settings.json"
+    return app_paths.user_data_dir() / "settings.json"
 
 
 def load_settings() -> AppSettings:

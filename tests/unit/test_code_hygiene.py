@@ -10,7 +10,7 @@ UTF8_BOM = b"\xef\xbb\xbf"
 
 
 def _iter_tracked_text_files() -> list[Path]:
-    extensions = {".py", ".md", ".toml", ".ini", ".yml", ".yaml", ".json", ".html", ".css", ".js"}
+    extensions = {".py", ".qml", ".md", ".toml", ".ini", ".yml", ".yaml", ".json", ".html", ".css", ".js"}
     ignored_dirs = {"venv", ".venv", ".git", ".pytest_cache", ".ruff_cache", "__pycache__", "build", "dist"}
     result: list[Path] = []
     for path in PROJECT_ROOT.rglob("*"):

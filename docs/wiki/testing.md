@@ -14,9 +14,10 @@ Bu sayfa [[index]] içindeki test mimarisini ve [[rules]] kurallarını zorunlu 
 | Test Dosyası | Denetlediği Kural |
 |---|---|
 | `test_wiki.py` | `docs/wiki/` içinde kırık wiki bağlantısı, öksüz sayfa veya [[index]] eksiği olmadığını; `CLAUDE.md` dosyasının temel giriş noktalarını içerdiğini doğrular. |
-| `test_layering.py` | AST analiziyle `src/core` katmanının `services`/`ui` import etmediğini ve `src/services` katmanının `ui` import etmediğini doğrular. |
+| `test_layering.py` | AST analiziyle `src/core` katmanının `services`/`ui` import etmediğini, `src/services` katmanının `ui` import etmediğini, `src/ui` katmanının `core` import etmediğini ve hiçbir modülde eski `tkinter` bağımlılığı bulunmadığını doğrular. |
 | `test_code_hygiene.py` | Kaynak dosyalarda UTF-8 BOM olmadığını ve çıplak `except:` veya sessiz geniş `except Exception:` bulunmadığını AST ile denetler. |
 | `test_logging_config.py` | Dosyaya loglamanın idempotent (tekrar çağrıldığında çift handler eklemeyen) çalıştığını ve istisna kancalarını doğrular. |
+| `test_ui_contrast.py` | WCAG AA (`>= 4.5:1`) kontrast oranlarını, `QT_QPA_PLATFORM=offscreen` ile `Main.qml` yerleşimini (kart boyutları ve üst üste binmeme), `QAccessibleInterface` erişilebilirlik adlarını ve `ControllerViewModel` ↔ `ProjectService` köprüsünü doğrular. |
 
 ## 4. Yayın Hattı ve Güvenlik Testleri
 | Test Dosyası | Denetlediği Kural |
@@ -27,3 +28,11 @@ Bu sayfa [[index]] içindeki test mimarisini ve [[rules]] kurallarını zorunlu 
 | `test_grabber_threading.py` | `MssRawGrabber` işçi thread değişiminde (yayını durdur/başlat) ve `ScreenShotError` sonrası GDI tutamaçlarını yeniler; yenilemeye rağmen başarısızsa hatayı gizlemez. |
 
 Performans ölçümü (birim test değildir): gerçek `mss` + gerçek `StreamServer` ile loopback istemcisi FPS ve ping ölçer; sonuçlar [[log]] kaydındadır.
+
+## 5. Paketleme, Yayın ve Güncelleme Testleri
+| Test Dosyası | Denetlediği Kural |
+|---|---|
+| `test_release_packaging.py` | Başlatıcı ve sürüm kaynağı SHA-256'sı sabit (DEĞİŞTİRME); PyInstaller bağımsız değişkenleri (`--onedir`, `--noupx`, `--debug=noarchive`, sabit epoch, veri dosyaları); özet kapısı (yok/farklı → `SystemExit`, `update` yazar); Release iş akışı kapıyı atlayamaz ve etiketi ortam değişkeniyle alır; tek sürüm kaynağı + README rozeti; Inno ayarları (`AppId`, `lowest`, `RelaunchAfterUpdate`); `tools/release.py` (itmez, `--check-tag`); `app_paths` (geliştirme/paketlenmiş); `third_party` ve lisanslar; `.gitignore`. |
+| `test_build_verify.py` | Gerçek kurulum kaydı/Başlat menüsü kısayolu deneme sonrası geri yazılır (sahte `winreg`), gerçek kurulum yoksa kalıntı silinir; `launch_check` çalışıyor/erken çıkış/yok; deneme ortamı yalıtımı; 10 PNG boyutu ve çok çerçeveli `.ico`. |
+| `test_update_service.py` | Sürüm sayısal karşılaştırma, ön sürüm/taslak yok sayma, adres/ad/boyut/SHA-256 kuralları, yönlendirme ana makine listesi, özet yoksa ret, kurulum argümanları ve SAC geri dönüşü (`ShellExecute`), tercihler, ortam değişkeni. |
+| `test_update_viewmodel.py` | Açılış denetimi sessizlik kuralları, elle denetim her sonucu gösterir, indirme → kurulum → çıkış isteği, Windows engeli bekleme/yeniden deneme/vazgeçme, sürümü atlama. |

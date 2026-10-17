@@ -10,6 +10,8 @@ import shutil
 import subprocess
 from typing import Callable
 
+from src.core import app_paths
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,14 +59,17 @@ def find_safe_adb_executable() -> str | None:
             continue
         safe_paths.append(cleaned)
 
+    # Pakete dahil adb önce aranır: sistemdeki farklı sürüm adb sunucusu, çalışan sunucuyu sonlandırabilir.
+    bundled_adb = app_paths.resource_root() / "third_party" / "platform-tools" / "adb.exe"
+    if bundled_adb.is_file():
+        return str(bundled_adb.resolve())
+
     found = shutil.which("adb", path=os.pathsep.join(safe_paths))
     if found:
         return str(Path(found).resolve())
 
     local_app_data = os.environ.get("LOCALAPPDATA", "")
-    project_tools_adb = Path(__file__).resolve().parents[2] / "tools" / "platform-tools" / "adb.exe"
     candidates = [
-        project_tools_adb,
         Path(local_app_data) / "Android" / "Sdk" / "platform-tools" / "adb.exe",
         Path(r"C:\Android\platform-tools\adb.exe"),
         Path(r"C:\platform-tools\adb.exe"),

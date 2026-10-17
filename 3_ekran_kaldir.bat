@@ -8,6 +8,6 @@ if %errorLevel% neq 0 (
 )
 
 echo Removing 3rd Virtual Display (Root\MttVDD)...
-"%~dp0tools\vdd\nefcon\x64\nefconc.exe" --remove-device-node --hardware-id Root\MttVDD --class-guid 4D36E968-E325-11CE-BFC1-08002BE10318
+"%~dp0third_party\vdd\nefcon\x64\nefconc.exe" --remove-device-node --hardware-id Root\MttVDD --class-guid 4D36E968-E325-11CE-BFC1-08002BE10318
 echo [OK] 3rd Virtual Display removed.
 timeout /t 2 >nul

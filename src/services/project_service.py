@@ -5,10 +5,16 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import logging
+from pathlib import Path
 import threading
 
 from src.core import adb_manager, app_settings, display_manager, input_injector, logging_config, screen_capture
+from src.services import update_service
 from src.services.stream_server import StreamServer
+from src.services.update_service import InstallerBlockedError, UpdateError, UpdateInfo
+from src.version import RELEASE_REPO, __version__
+
+__all__ = ["InstallerBlockedError", "ProjectService", "ServiceRuntimeSnapshot", "UpdateError", "UpdateInfo"]
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +176,46 @@ class ProjectService:
             self._thread = None
             self._loop = None
             self._server = None
+
+    # --- Uygulama içi güncelleme (arayüz yalnızca bu cepheyi kullanır) ---
+
+    @property
+    def current_version(self) -> str:
+        return __version__
+
+    @property
+    def release_page_url(self) -> str:
+        return f"https://github.com/{RELEASE_REPO}/releases/latest"
+
+    def update_check_allowed(self) -> bool:
+        """Açılış denetimi ayardan ve `TABSCREEN_NO_UPDATE_CHECK` ortam değişkeninden kapatılabilir."""
+        return update_service.load_preferences().check_on_startup and not update_service.update_check_disabled_by_env()
+
+    def set_update_check_on_startup(self, enabled: bool) -> None:
+        prefs = update_service.load_preferences()
+        prefs.check_on_startup = bool(enabled)
+        update_service.save_preferences(prefs)
+
+    def check_for_update(self, ignore_skipped: bool = False) -> UpdateInfo | None:
+        """Yeni sürüm varsa özetini döndürür; ağ/doğrulama hatasında `UpdateError` fırlatır."""
+        info = update_service.check_for_update(__version__)
+        if info is None:
+            return None
+        if not ignore_skipped and update_service.load_preferences().skipped_version == info.version:
+            return None
+        return info
+
+    def skip_update_version(self, version: str) -> None:
+        prefs = update_service.load_preferences()
+        prefs.skipped_version = version
+        update_service.save_preferences(prefs)
+
+    def download_update(self, info: UpdateInfo, progress: update_service.ProgressCallback | None = None) -> Path:
+        return update_service.download_installer(info, progress=progress)
+
+    def launch_update_installer(self, installer: Path) -> None:
+        """Sessiz kurulumu başlatır; `InstallerBlockedError` Windows'un engellediğini belirtir."""
+        update_service.launch_installer(installer, log_dir=installer.parent)
 
     def get_snapshot(self) -> ServiceRuntimeSnapshot:
         """Anlık çalışma durumunu arayüz için paketler."""

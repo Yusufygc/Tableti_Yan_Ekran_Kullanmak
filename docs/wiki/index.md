@@ -11,3 +11,8 @@ Bu sayfa, **P029 Tablet Ekranı Kullanımı** projesinin bilgi tabanının (LLM 
 - [[architecture]] — 3 ekranlı (Monitör + Laptop + USB Android Tablet) sistem mimarisi, katman kuralları ve yerel ADB tünel protokolü.
 - [[testing]] — Birim testleri, kullanıcı verisi yalıtımı ve AST tabanlı mimari bekçi (guardian) testleri.
 - [[roadmap]] — Aşamalı geliştirme planı ve tamamlanma durumu.
+
+## 3. Dağıtım, Yayın ve Güncelleme
+- [[exe-dagitim-rehberi]] — İmzasız Windows exe dağıtımı: Akıllı Uygulama Denetimi, kararlı exe + özet kapısı, Inno kurulum dosyası, paketlenmiş çalışma ortamı, simgeler.
+- [[surum-yayinlama]] — `vX.Y.Z` etiketiyle GitHub Release süreci, `tools/release.py`, kontrol listesi ve geri alma.
+- [[guncelleme-sistemi]] — Uygulama içi güncelleme: denetim, doğrulamalı indirme, sessiz kurulum, Windows engeli bekleme.

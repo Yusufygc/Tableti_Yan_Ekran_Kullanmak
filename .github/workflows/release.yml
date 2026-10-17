@@ -1,0 +1,60 @@
+name: Release
+
+# vX.Y.Z etiketi itilince: etiket/sürüm denetimi -> lint + test -> kararlı exe kapısı + kurulum dosyası -> GitHub Release.
+# Etiketi yalnızca sürüm sahibi iter (docs/wiki/surum-yayinlama.md).
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      PYTHONIOENCODING: utf-8
+      QT_QPA_PLATFORM: offscreen
+      TAG: ${{ github.ref_name }}  # betiğe doğrudan gömülmez: komut enjeksiyonu olmasın
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"  # yerelle aynı: exe özeti Python sürümüne bağlıdır
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+
+      - name: Etiket ile src/version.py uyumunu denetle
+        run: python tools/release.py --check-tag "$env:TAG"
+
+      - name: Bağımlılıklar
+        run: python -m pip install -r requirements-dev.txt -r requirements-build.txt
+
+      - run: python -m ruff check .
+
+      - run: python -m pytest -q
+        env:
+          PYTHONWARNDEFAULTENCODING: "1"
+
+      - name: Inno Setup
+        run: |
+          if (-not (Get-Command ISCC -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      # Kararlı exe özeti onaylananla (packaging/launcher.sha256) aynı değilse bu adım yayını durdurur
+      - name: Kurulum dosyasını derle
+        run: python build_installer.py
+
+      - name: GitHub Release oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $flags = @()
+          if ($env:TAG -like "*-*") { $flags += "--prerelease" }
+          gh release create $env:TAG dist/installer/* --title "TabScreen USB $env:TAG" --generate-notes --verify-tag @flags

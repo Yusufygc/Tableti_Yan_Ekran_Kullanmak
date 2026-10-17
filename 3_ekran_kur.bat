@@ -10,12 +10,12 @@ if %errorLevel% neq 0 (
 
 echo [1/3] Copying vdd_settings.xml to C:\VirtualDisplayDriver...
 if not exist "C:\VirtualDisplayDriver" mkdir "C:\VirtualDisplayDriver"
-copy /Y "%~dp0tools\vdd\VirtualDisplayDriver\vdd_settings.xml" "C:\VirtualDisplayDriver\vdd_settings.xml" >nul
+copy /Y "%~dp0third_party\vdd\VirtualDisplayDriver\vdd_settings.xml" "C:\VirtualDisplayDriver\vdd_settings.xml" >nul
 
 echo [2/3] Installing Virtual Display Driver (Root\MttVDD)...
-"%~dp0tools\vdd\nefcon\x64\nefconc.exe" --remove-device-node --hardware-id Root\MttVDD --class-guid 4D36E968-E325-11CE-BFC1-08002BE10318 >nul 2>&1
-"%~dp0tools\vdd\nefcon\x64\nefconc.exe" --create-device-node --hardware-id Root\MttVDD --class-name Display --class-guid 4D36E968-E325-11CE-BFC1-08002BE10318
-"%~dp0tools\vdd\nefcon\x64\nefconc.exe" --install-driver --inf-path "%~dp0tools\vdd\VirtualDisplayDriver\MttVDD.inf"
+"%~dp0third_party\vdd\nefcon\x64\nefconc.exe" --remove-device-node --hardware-id Root\MttVDD --class-guid 4D36E968-E325-11CE-BFC1-08002BE10318 >nul 2>&1
+"%~dp0third_party\vdd\nefcon\x64\nefconc.exe" --create-device-node --hardware-id Root\MttVDD --class-name Display --class-guid 4D36E968-E325-11CE-BFC1-08002BE10318
+"%~dp0third_party\vdd\nefcon\x64\nefconc.exe" --install-driver --inf-path "%~dp0third_party\vdd\VirtualDisplayDriver\MttVDD.inf"
 
 echo [3/3] Switching Windows display mode to Extend...
 "%SystemRoot%\System32\DisplaySwitch.exe" /extend

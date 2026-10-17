@@ -47,3 +47,14 @@ def test_ui_does_not_import_core_directly() -> None:
                 violations.append(f"{py_file.relative_to(PROJECT_ROOT)} -> {mod}")
     assert not violations, f"UI katmanı Core katmanını doğrudan import edemez (ProjectService kullanmalı): {violations}"
 
+
+def test_no_legacy_tkinter_imports() -> None:
+    """Masaüstü arayüzü PySide6/QML kullandığından eski tkinter bağımlılığı hiçbir yerde bulunmamalıdır."""
+    violations: list[str] = []
+    target_files = [*SRC_DIR.rglob("*.py"), PROJECT_ROOT / "main.py"]
+    for py_file in target_files:
+        for mod in _imported_modules(py_file):
+            if mod == "tkinter" or mod.startswith("tkinter."):
+                violations.append(f"{py_file.relative_to(PROJECT_ROOT)} -> {mod}")
+    assert not violations, f"Eski Tkinter UI bağımlılığı tespit edildi: {violations}"
+

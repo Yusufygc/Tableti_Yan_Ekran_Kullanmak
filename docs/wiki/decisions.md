@@ -34,3 +34,17 @@ Bu sayfa projede alınan teknik kararları, gerekçelerini ve reddedilen seçene
 ## Karar 4: İlk Gün Altyapı ve Bekçi Testleri
 - **Seçilen:** `ruff` (`E9`, `F`), `pytest` (`EncodingWarning` hata modunda), kullanıcı verisi yalıtımı (`conftest.py`) ve AST tabanlı bekçi testler ([[testing]]).
 - **Neden:** Geç eklenen lint, kodlama ve katman kurallarının sonradan toplu temizlik ve veri bozulması maliyeti yaratmasını ilk günden önlemek ([[rules]]).
+
+## Karar 7: Masaüstü Kontrol Paneli İçin Tkinter Yerine PySide6 + QML
+- **Seçilen:** `PySide6-Essentials==6.12.0` (`QGuiApplication` + `QQmlApplicationEngine` + `ControllerViewModel(QObject)` + `src/ui/qml/Main.qml`) ve LGPLv3 uyumu için `THIRD_PARTY_NOTICES.md`. (`PySide6-Addons`, `PySide6-WebEngine`, `PySide6-Pdf` gibi kullanılmayan ~250 MB eklentiler dışarıda bırakıldı.)
+- **Neden:** Farklı monitör çözünürlüklerinde (`2560x1600`, `1920x1080`, dar pencereler) kesilme/kırpılma olmadan esnek (`GridLayout` + `Flickable`) çalışması, donanım hızlandırmalı modern koyu tema, `QAccessible` ekran okuyucu uyumu, klavye odak halkası (`activeFocusOnTab`) ve `QT_QPA_PLATFORM=offscreen` ile deterministik birim testi desteği.
+- **Reddedilen Seçenek:** Eski `tkinter` arayüzü — çoklu monitör DPI ve dinamik metin sarmalama geçişlerinde kırpılma sorunları yaşattığı için tamamen kaldırıldı ve `test_no_legacy_tkinter_imports` AST bekçi testiyle kalıcı olarak engellendi.
+- İlgili: [[architecture]], [[testing]], [[log]].
+
+## Karar 8: İmzasız Dağıtım — Kararlı Exe, Inno Kurulum Dosyası ve GitHub Releases ile Güncelleme
+- **Seçilen:** PyInstaller `--onedir` + sabit başlatıcı (`packaging/launcher.py`) ile her sürümde bayt bayt aynı exe; uygulama kodu `.pyc` olarak exe dışında. Derleme, onaylı SHA-256 (`packaging/launcher.sha256`) ile karşılaştırılır, farklıysa yayın durur. Kurulum Inno Setup 6 (`PrivilegesRequired=lowest`), yayın `vX.Y.Z` etiketiyle GitHub Actions + GitHub Releases, güncelleme uygulama içinden (`update_service`, GitHub `releases/latest`, zorunlu SHA-256).
+- **Neden:** Kod imzalama yok (kullanıcı kararı); Windows 11 Akıllı Uygulama Denetimi imzasız her yeni exe özetini bulut itibarına bırakır ve öngörülemez biçimde engelleyebilir. Exe sabit kalırsa yalnızca kurulum dosyası her sürümde yenidir. Ölçüm: farklı kök + değişen `__version__` ile aynı exe özeti ([[exe-dagitim-rehberi]]).
+- **adb ve VDD dosyaları repoda (`third_party/`):** CI ve yerel derleme aynı girdiyle çalışsın, kurulum sonrası elle iş gerekmesin diye minimum dosyalar (≈11 MB, lisans metinleriyle) commit edildi. Reddedilen: CI'da "latest" adresinden indirme (sabit sürüm/özet yok, ağ bağımlılığı), kuruluma dahil etmeme (kullanıcı elle kurmalı).
+- **Reddedilenler:** her sürümde yeni exe; kendi kendini kuran tek exe; yeniden açma için ek PowerShell/exe (yeni engel riski); SAC'ı kapatma önerisi; kod imzalama/SignPath (kapsam dışı).
+- **Bilinen sınır:** SAC'lı makinede açılma ve CI özetinin yerelle eşitliği ilk Release'te elle doğrulanacak ([[surum-yayinlama]]); özet GitHub'dan geldiği için GitHub hesabı ele geçirilirse sahte güncelleme yayınlanabilir ([[guncelleme-sistemi]]).
+- İlgili: [[roadmap]], [[log]].

@@ -1,0 +1,29 @@
+# UTF-8
+# SABIT surum kaynagi (1.0.0.0): urun surumu degisse de exe'nin ozeti degismesin diye bilerek yukseltilmez.
+# Gercek surum kurulum dosyasinda, "Uygulamalar ve ozellikler" kaydinda ve uygulama basliginda gorunur.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 0, 0, 0),
+    prodvers=(1, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [StringStruct('CompanyName', ''),
+         StringStruct('FileDescription', 'TabScreen USB'),
+         StringStruct('FileVersion', '1.0.0.0'),
+         StringStruct('InternalName', 'TabScreenUSB'),
+         StringStruct('OriginalFilename', 'TabScreenUSB.exe'),
+         StringStruct('ProductName', 'TabScreen USB'),
+         StringStruct('ProductVersion', '1.0.0.0')])
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)

@@ -10,12 +10,14 @@ import sys
 import threading
 from types import TracebackType
 
+from src.core import app_paths
+
 _HANDLER_TAG = "tabscreen_rotating_file_handler"
 
 
 def log_dir() -> Path:
     """Kullanıcı log klasörünü döndürür (testlerde conftest ile yalıtılır)."""
-    return Path.home() / ".tabscreen_usb" / "logs"
+    return app_paths.user_data_dir() / "logs"
 
 
 def resolve_log_level(level_arg: str | None = None) -> int:
