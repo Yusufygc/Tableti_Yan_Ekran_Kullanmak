@@ -2,6 +2,32 @@
 
 Bu sayfa [[index]] kapsamında projede yapılan tüm önemli değişiklikleri en yeni kayıt en üstte olacak şekilde listeler. Kurallar için [[rules]] sayfasına bakın.
 
+## [2026-10-17] INGEST | Otomatik Kip: Hareket Sırasında Akıcı, Ekran Durulunca Piksel Keskin (`perf/otomatik-kalite-modu`)
+- Sorun: Video kipi 1280x800 büyütülerek bulanıktı; tam çözünürlük ise tablet çözme tavanı yüzünden ≈20 FPS. Çözüm: iki kademeli akış — hareket varken 1280x800 q72 4:2:0 (≈30 FPS), ekran `SETTLE_SEC` (0,2 sn) değişmeyince tek tam çözünürlük q92 4:4:4 keskin kare.
+- `screen_capture.py`: `ScreenCapturer.acquire(adaptive=True)` durum makinesi (`_decide`), `AcquiredFrame.sharp`, keskin kare `encode` içinde tam çözünürlük/4:4:4/`SHARP_JPEG_QUALITY`. `app_settings.py`: `"auto"` ön ayarı (varsayılan kip), `SETTLE_SEC`, `SHARP_JPEG_QUALITY`.
+- `stream_server.py`: Otomatik kipte `adaptive` yakalama; değişim yokken (1 sn sonra) yoklama 15 FPS'e düşer (`IDLE_POLL_FPS`). `index.html`: canvas sabit (ekran doğal boyutu), küçük/büyük kareler aynı yüzeye ölçeklenerek çizilir; mod düğmesi Otomatik/Okuma/Video; HUD'da son kare genişliği (`…px`). `controller_app.py`/`main.py`: Otomatik seçeneği.
+- Ölçüm (gerçek sunucu + sentetik kod/metin kaydırma, TB330FU Chrome, Chrome DevTools ile HUD okundu): Otomatik kaydırma 25-26 FPS (1280px), durunca 1920px; Okuma 19 FPS (çöz 54 ms); Video 29 FPS (çöz 27 ms). Tablet ekran görüntüsü karşılaştırması: Otomatik (durulmuş) = Okuma keskinliğinde, Video belirgin bulanık.
+- Not: kayıtlı `settings.json` eski kipi (okuma/video) tutar; tablet HUD'ındaki Mod düğmesiyle Otomatik'e geçilir. Yeni testler: `tests/unit/test_adaptive_mode.py` (41 test). [[decisions]] Karar 6, [[architecture]], [[testing]] güncellendi.
+
+## [2026-10-17] REVIEW | Tablet (TB330FU) Çözme Ölçümü ve Mod Ön Ayarları
+- Kullanıcı HUD'u: 15-17 FPS, çöz 100-120 ms, atılan 10-20. Geçici ölçüm sayfaları (repo dışı) ADB üzerinden tablet Chrome'unda koşuldu (Helio G80/MT8786, Chrome 155, ekran 1920x1200 @ dpr 1.5).
+- Bulgular: USB/ADB tüneli darboğaz değil (15-32 MB/s, ≥96 kare/sn). Darboğaz tablet JPEG çözmesi: 1920x1200 4:2:0 q72 ≈47 ms (≈21 FPS), 4:4:4 q88 ≈51 ms, 1440x900 ≈34 ms (27.7 FPS), 1280x800 ≈30 ms (29.6 FPS), 960x600 ≈21 ms. `bitmaprenderer`, `<img>.decode()`, WebP ve `resizeWidth` seçeneği daha hızlı değil (WebP/resize daha yavaş).
+- Hata (önceki turda benim eklediğim): `createImageBitmap(blob, {colorSpaceConversion:"none", premultiplyAlpha:"none"})` çözmeyi 47 → 64 ms'ye yavaşlatıyordu; seçenekler kaldırıldı.
+- `MODE_PRESETS` artık `(kalite, FPS, ölçek)`: okuma 88/30/1.0 (keskin, ≈20 FPS tavan, durağan içerik için yeterli), video 72/30/2⁄3 (1280x800, ≈30 FPS). `_scale_image` `round()` kullanır (2⁄3 ölçeğinde 799 piksel riski). Tablet çözme tavanını aşmak için daha fazlası H.264 (WebCodecs donanım çözme) gerektirir; [[decisions]] Karar 5'te alternatif olarak not edildi.
+
+## [2026-10-17] REVIEW | Regresyon: Yayın Durdur/Başlat Sonrası Sıfır Kare (BitBlt Hatası) Düzeltildi
+- Belirti: uygulamada "Gönderilen Kare: 0"; log'da `ScreenShotError ... BitBlt`. Kök neden: `mss` GDI tutamaçları oluşturan thread'e bağlıdır; yayın durdurulup başlatılınca yeni işçi thread eski tutamaçlarla `BitBlt` yapamıyordu (ayrıca sanal ekran kur/kaldır tutamaçları geçersizleştirir). Önceki FPS turunda ölçüm yalnızca tek başlatma senaryosunu kapsadığı için kaçmıştı.
+- `MssRawGrabber.grab`: thread değişiminde `mss.MSS()` yeniden açılır; `ScreenShotError`'da tutamaçlar yenilenip bir kez yeniden denenir, hâlâ başarısızsa hata loglanıp yukarı iletilir.
+- Doğrulama: gerçek `mss` ile 3 ardışık durdur/başlat turunda 88-90 kare/3 sn; regresyon testi `tests/unit/test_grabber_threading.py` (35 test). [[testing]] güncellendi.
+
+## [2026-10-17] REVIEW | FPS Optimizasyonu ve Güvenlik Denetimi Bulguları Giderildi
+- Denetim (V2 şablonu) 12 bulgu çıkardı; hepsi uygulandı. Ölçüm (1920x1200, loopback, gerçek `mss`): sunucu tavanı 27.9 → 38 FPS (video), ping 72 → 0.3 ms (event loop artık bloke değil); `scale_factor=0.75` 21 → 35 FPS. Tablet tarafı (TB330FU) ölçülmedi.
+- `screen_capture.py`: `RawFrame` (mss BGRA doğrudan `BGRX` olarak okunur, ≈5-8 ms RGB dönüşümü kalktı), iki aşamalı `acquire` + `encode`, satır tabanlı delta imzası (her 8. satır tam genişlik; metin imleci gibi küçük değişimler artık yakalanır), tamsayı ölçeklerde `Image.reduce`, `CaptureFrame.grab_ms/encode_ms`.
+- `stream_server.py`: yakalama ve kodlama iki ayrı işçi thread'de (N. kare kodlanırken N+1. yakalanır), Host/Origin bekçisi (`loopback_guard_middleware`, yabancı Origin/Host → 403), tek istemci politikası (yeni bağlantı eskiyi `4001` ile kapatır), bozuk mesaj doğrulaması, topoloji önbelleği (1 sn), `/status` içinde `grab_ms/encode_ms/send_ms`.
+- `index.html`: `backdrop-filter` kaldırıldı, yalnızca en son kare çözülür (backpressure), HUD'a çözme süresi ve atılan kare sayısı eklendi, `4001` kodunda yeniden bağlanma yapılmaz.
+- `app_settings.py`: `MODE_PRESETS` tek kaynak (video hedefi 45 → 60 FPS); `input_injector.py`: `TOUCH_ACTIONS` tablosu (if/elif zinciri kalktı); `controller_app.py`: `_build_ui` 312 satırdan 4 küçük yapı metoduna bölündü (widget sayısı ve pencere boyutu değişmedi).
+- Yeni testler: `test_stream_security_pipeline.py`, `test_capture_pipeline.py` (21 → 32 test). [[decisions]] Karar 5, [[architecture]] ve [[testing]] güncellendi.
+
 ## [2026-10-17] UPDATE | Bağımlılık Güvenlik Yükseltmesi (pip-audit)
 - CI `pip-audit` taramasında `pillow==11.3.0` ve `aiohttp==3.12.15` sürümlerinde bildirilen güvenlik açıkları giderildi.
 - `requirements.txt` içinde sürümler `mss==10.2.0`, `pillow==12.3.0` ve `aiohttp==3.14.5` olarak sabitlendi; `.github/workflows/ci.yml` içinde `pip-audit==2.10.1` sürümüne güncellendi.

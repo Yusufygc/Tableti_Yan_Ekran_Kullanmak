@@ -17,10 +17,10 @@ class _FakeGrabber:
     def __init__(self) -> None:
         self.counter = 0
 
-    def grab_rgb(self, monitor: display_manager.MonitorInfo) -> tuple[int, int, bytes]:
+    def grab(self, monitor: display_manager.MonitorInfo) -> screen_capture.RawFrame:
         self.counter += 1
         color = (self.counter * 37) % 255
-        return 64, 36, bytes([color, 100, 180] * (64 * 36))
+        return screen_capture.RawFrame(64, 36, bytes([color, 100, 180] * (64 * 36)), "RGB")
 
 
 def _fake_topology(preferred_index: int = 3) -> display_manager.DisplayTopologyResult:

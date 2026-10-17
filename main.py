@@ -22,9 +22,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--monitor", type=int, default=None, help="Aktarılacak ekran numarası (varsayılan: 3)")
     parser.add_argument(
         "--mode",
-        choices=["reading", "video"],
+        choices=["auto", "reading", "video"],
         default=None,
-        help="Görüntü kipi: reading (keskin metin) veya video (yüksek FPS)",
+        help="Görüntü kipi: auto (önerilen), reading (hep keskin) veya video (hep akıcı)",
     )
     parser.add_argument("--no-touch", action="store_true", help="Tabletten dokunmatik kontrolü devre dışı bırakır")
     return parser.parse_args(argv)

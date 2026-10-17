@@ -17,6 +17,19 @@ Bu sayfa projede alınan teknik kararları, gerekçelerini ve reddedilen seçene
 - **Neden:** Yan ekran, terminal izleme, kod/doküman okuma ve video izleme senaryoları için Android Studio/SDK derleme yükü olmadan hızlı, şeffaf ve dokunmatik destekli çözüm sunar. Durağan ekranlarda kare farkı (delta) kontrolü ile CPU tüketimi sıfıra yakın tutulur.
 - **Reddedilen Seçenek:** C++/Rust UMDF sıfırdan sürücü + Native Kotlin APK (ilk aşamada EV Code Signing ve ağır Android SDK bağımlılığı getirdiği için reddedildi; 3. sanal ekran için açık kaynaklı imzalı VDD kullanılmasına karar verildi).
 
+## Karar 5: İki Aşamalı Thread Hattı, Host/Origin Bekçisi ve Tek İstemci
+- **Seçilen:** `StreamServer` yakalamayı (GDI, thread'e bağlı `mss`) ve JPEG kodlamayı iki ayrı tek-işçili `ThreadPoolExecutor`'da çalıştırır; event loop yalnızca WebSocket G/Ç ve dokunmatik mesajlarını işler. Her HTTP/WS isteğinde `Host` ve (varsa) `Origin` başlığı loopback olmalıdır. Aynı anda tek tablet istemcisi tutulur.
+- **Neden:** Ölçüm (1920x1200): yakalama ≈20 ms, kodlama 7-10 ms; seri hat ≈28 FPS tavanı ve event loop bloke olduğu için 40-70 ms ping gecikmesi veriyordu. Tarayıcılar `ws://127.0.0.1` adresine same-origin kısıtı olmadan bağlanabildiğinden, kötü niyetli bir web sayfası ekran akışını okuyup fare enjekte edebilirdi. Çift istemci her kareyi iki kez gönderiyordu.
+- **Reddedilen Seçenek:** DXGI Desktop Duplication (`dxcam`) — yakalamayı ≈5 ms'ye indirebilir ama `numpy` + yeni sürücü bağımlılığı getirir; yalnızca ölçüm yetersiz kalırsa değerlendirilecek. Oturum token'ı — Origin/Host kontrolü tarayıcı tabanlı saldırıyı kapattığı ve yerel süreçler zaten `SendInput` kullanabildiği için gereksiz bulundu (YAGNI).
+- **Tablet çözme tavanı (TB330FU ölçümü):** JPEG çözme 1920x1200'de ≈47-51 ms (≈20 FPS), 1280x800'de ≈30 ms (≈30 FPS). Bu yüzden video modu 1280x800'e küçültülür (`MODE_PRESETS`), okuma modu keskinlik için tam çözünürlükte kalır. 20 FPS üstünde tam çözünürlük için seçenekler: H.264 + WebCodecs `VideoDecoder` (donanım çözme; PC tarafında kodlayıcı bağımlılığı gerekir, XL iş) veya yalnızca değişen bölgeleri gönderen dirty-rect protokolü (bayat kare atma ile çakışır, yeniden tasarım gerekir).
+- İlgili: [[architecture]], [[log]].
+
+## Karar 6: Otomatik Kip — Hareket Karesi + Durulunca Tek Keskin Kare
+- **Seçilen:** Varsayılan kip `auto`. Hareket varken 1280x800 q72 4:2:0 kareler (tablet çözme ≈27-33 ms → ≈25-30 FPS); ekran 0,2 sn değişmeyince tek tam çözünürlük q92 4:4:4 kare (çözme ≈50 ms bir kez). Durağan ekranda sıfır trafik.
+- **Neden:** Tablet (TB330FU) 1920x1200 JPEG'i en fazla ≈20 FPS çözer; sürekli tam çözünürlük akıcılığı, sürekli küçültme keskinliği öldürür. İnsan gözü hareket sırasında ayrıntıyı seçemez, durulunca keskinlik ister; iki kademe ikisini birlikte verir.
+- **Reddedilen Seçenekler:** (1) Video kipini 1440x900 q85'e çıkarmak — ≈28 FPS tavanı ve hâlâ bulanık. (2) Dirty-rect/yama protokolü — "yalnızca en son kareyi çöz" bayat kare atma ile çakışır (atılan yama içeriği bozar), yeniden tasarım gerekir. (3) H.264 + WebCodecs donanım çözme — yalnızca sürekli tam çözünürlük video gerekirse (PC tarafı kodlayıcı bağımlılığı, XL).
+- İlgili: [[architecture]], [[log]].
+
 ## Karar 4: İlk Gün Altyapı ve Bekçi Testleri
 - **Seçilen:** `ruff` (`E9`, `F`), `pytest` (`EncodingWarning` hata modunda), kullanıcı verisi yalıtımı (`conftest.py`) ve AST tabanlı bekçi testler ([[testing]]).
 - **Neden:** Geç eklenen lint, kodlama ve katman kurallarının sonradan toplu temizlik ve veri bozulması maliyeti yaratmasını ilk günden önlemek ([[rules]]).

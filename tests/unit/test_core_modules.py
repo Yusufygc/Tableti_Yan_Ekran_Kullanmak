@@ -13,8 +13,8 @@ class _FakeGrabber:
         self.height = height
         self.payload = bytes([40, 80, 120] * (width * height))
 
-    def grab_rgb(self, monitor: display_manager.MonitorInfo) -> tuple[int, int, bytes]:
-        return self.width, self.height, self.payload
+    def grab(self, monitor: display_manager.MonitorInfo) -> screen_capture.RawFrame:
+        return screen_capture.RawFrame(self.width, self.height, self.payload, "RGB")
 
 
 def test_display_topology_three_screens_and_fallback() -> None:

@@ -102,6 +102,17 @@ def _win32_send_mouse_command(cmd: MouseCommand) -> None:
     ctypes.windll.user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(inp))
 
 
+# Olay tipi -> sırayla gönderilecek Win32 eylem bayrakları (yeni olay tipi eklemek yalnızca bu tabloyu değiştirir).
+TOUCH_ACTIONS: dict[str, tuple[int, ...]] = {
+    "down": (MOUSEEVENTF_LEFTDOWN,),
+    "move": (0,),
+    "up": (MOUSEEVENTF_LEFTUP,),
+    "tap": (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP),
+    "right_tap": (MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP),
+    "scroll": (MOUSEEVENTF_WHEEL,),
+}
+
+
 class TouchInputInjector:
     """3. ekrana özel dokunmatik -> fare enjektörü."""
 
@@ -163,46 +174,15 @@ class TouchInputInjector:
         if not self.enabled:
             return []
 
-        commands: list[MouseCommand] = []
-
-        if event_type == "down":
-            cmd = self._emit(norm_x, norm_y, monitor, virtual_desktop, MOUSEEVENTF_LEFTDOWN)
-            if cmd:
-                commands.append(cmd)
-        elif event_type == "move":
-            cmd = self._emit(norm_x, norm_y, monitor, virtual_desktop, 0)
-            if cmd:
-                commands.append(cmd)
-        elif event_type == "up":
-            cmd = self._emit(norm_x, norm_y, monitor, virtual_desktop, MOUSEEVENTF_LEFTUP)
-            if cmd:
-                commands.append(cmd)
-        elif event_type == "tap":
-            down_cmd = self._emit(norm_x, norm_y, monitor, virtual_desktop, MOUSEEVENTF_LEFTDOWN)
-            up_cmd = self._emit(norm_x, norm_y, monitor, virtual_desktop, MOUSEEVENTF_LEFTUP)
-            if down_cmd:
-                commands.append(down_cmd)
-            if up_cmd:
-                commands.append(up_cmd)
-        elif event_type == "right_tap":
-            rdown = self._emit(norm_x, norm_y, monitor, virtual_desktop, MOUSEEVENTF_RIGHTDOWN)
-            rup = self._emit(norm_x, norm_y, monitor, virtual_desktop, MOUSEEVENTF_RIGHTUP)
-            if rdown:
-                commands.append(rdown)
-            if rup:
-                commands.append(rup)
-        elif event_type == "scroll":
-            wheel_cmd = self._emit(
-                norm_x,
-                norm_y,
-                monitor,
-                virtual_desktop,
-                MOUSEEVENTF_WHEEL,
-                mouse_data=int(delta_y),
-            )
-            if wheel_cmd:
-                commands.append(wheel_cmd)
-        else:
+        action_sequence = TOUCH_ACTIONS.get(event_type)
+        if action_sequence is None:
             logger.warning("Bilinmeyen dokunmatik olay tipi: %s", event_type)
+            return []
 
+        mouse_data = int(delta_y) if event_type == "scroll" else 0
+        commands: list[MouseCommand] = []
+        for action_flags in action_sequence:
+            cmd = self._emit(norm_x, norm_y, monitor, virtual_desktop, action_flags, mouse_data=mouse_data)
+            if cmd:
+                commands.append(cmd)
         return commands

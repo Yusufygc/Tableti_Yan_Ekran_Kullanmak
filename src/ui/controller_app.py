@@ -6,6 +6,7 @@ import logging
 import threading
 import tkinter as tk
 from tkinter import ttk
+from typing import Callable
 import webbrowser
 
 from src.services.project_service import ProjectService, ServiceRuntimeSnapshot
@@ -22,6 +23,9 @@ THEME_COLORS: dict[str, tuple[str, str]] = {
     "status_warn_on_card": ("#FBBF24", "#161F30"),     # Kontrast: ~9.5:1
     "button_primary": ("#0B0F19", "#38BDF8"),          # Kontrast: ~9.1:1
 }
+
+CARD_BORDER_COLOR = "#26334D"
+MODE_LABELS = {"auto": "Otomatik", "reading": "Okuma", "video": "Video"}
 
 
 class ControllerWindow:
@@ -75,10 +79,100 @@ class ControllerWindow:
             selectforeground=[("readonly", "#38BDF8")],
         )
 
-    def _build_ui(self) -> None:
-        fg_main, bg_main = THEME_COLORS["primary_text_on_bg"]
-        fg_sec, bg_card = THEME_COLORS["secondary_text_on_card"]
+    # --- Yerleşim yardımcıları (tekrarlanan widget kurulumunu tek yerde toplar) ---
+
+    def _make_card(self, parent: tk.Frame, row: int) -> tk.Frame:
+        _, bg_card = THEME_COLORS["secondary_text_on_card"]
+        card = tk.Frame(
+            parent,
+            bg=bg_card,
+            padx=18,
+            pady=14,
+            highlightthickness=1,
+            highlightbackground=CARD_BORDER_COLOR,
+        )
+        card.grid(row=row, column=0, sticky="ew", pady=6)
+        card.columnconfigure(0, weight=1)
+        return card
+
+    def _make_card_title(self, card: tk.Frame, text: str, columnspan: int = 1, pady: tuple[int, int] = (0, 0)) -> None:
+        fg_main, _ = THEME_COLORS["primary_text_on_bg"]
+        _, bg_card = THEME_COLORS["secondary_text_on_card"]
+        tk.Label(
+            card,
+            text=text,
+            font=("Segoe UI", 12, "bold"),
+            fg=fg_main,
+            bg=bg_card,
+            anchor="w",
+        ).grid(row=0, column=0, columnspan=columnspan, sticky="w", pady=pady)
+
+    def _make_button(
+        self,
+        parent: tk.Frame,
+        text: str,
+        command: Callable[[], None],
+        primary: bool = False,
+        bold: bool = False,
+        pady: int = 6,
+    ) -> tk.Button:
+        fg_main, _ = THEME_COLORS["primary_text_on_bg"]
         btn_fg, btn_bg = THEME_COLORS["button_primary"]
+        fg = btn_fg if primary else fg_main
+        return tk.Button(
+            parent,
+            text=text,
+            font=("Segoe UI", 12, "bold" if bold else "normal"),
+            fg=fg,
+            bg=btn_bg if primary else "#26334D",
+            activebackground="#7DD3FC" if primary else "#334155",
+            activeforeground=fg,
+            relief=tk.FLAT,
+            pady=pady,
+            cursor="hand2",
+            command=command,
+        )
+
+    def _make_status_label(
+        self,
+        parent: tk.Frame,
+        variable: tk.StringVar,
+        fg: str,
+        bold: bool = False,
+        wrap: bool = True,
+    ) -> tk.Label:
+        _, bg_card = THEME_COLORS["secondary_text_on_card"]
+        lbl = tk.Label(
+            parent,
+            textvariable=variable,
+            font=("Segoe UI", 12, "bold" if bold else "normal"),
+            fg=fg,
+            bg=bg_card,
+            justify=tk.LEFT,
+            anchor="w",
+        )
+        if wrap:
+            self._wrap_labels.append(lbl)
+        return lbl
+
+    def _choice_style(self) -> dict[str, object]:
+        fg_main, _ = THEME_COLORS["primary_text_on_bg"]
+        fg_sec, bg_card = THEME_COLORS["secondary_text_on_card"]
+        return {
+            "font": ("Segoe UI", 12),
+            "fg": fg_sec,
+            "bg": bg_card,
+            "selectcolor": "#0B0F19",
+            "activebackground": bg_card,
+            "activeforeground": fg_main,
+            "anchor": "w",
+            "command": self._on_options_changed,
+        }
+
+    # --- Ana yerleşim ---
+
+    def _build_ui(self) -> None:
+        _, bg_main = THEME_COLORS["primary_text_on_bg"]
 
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
@@ -87,59 +181,52 @@ class ControllerWindow:
         main_frame.grid(row=0, column=0, sticky="nsew")
         main_frame.columnconfigure(0, weight=1)
 
-        # Üst Başlık ve Canlı Rozet Satırı
+        self._build_header(main_frame)
+        self._build_display_card(main_frame)
+        self._build_options_card(main_frame)
+        self._build_action_card(main_frame)
+
+        self.root.bind("<Configure>", self._on_window_configure)
+
+    def _build_header(self, main_frame: tk.Frame) -> None:
+        fg_main, bg_main = THEME_COLORS["primary_text_on_bg"]
+        fg_sec, _ = THEME_COLORS["secondary_text_on_card"]
+
         header = tk.Frame(main_frame, bg=bg_main)
         header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         header.columnconfigure(0, weight=1)
 
-        title_lbl = tk.Label(
+        tk.Label(
             header,
             text="TabScreen USB — 3. Ekran (Android Tablet) Yöneticisi",
             font=("Segoe UI", 15, "bold"),
             fg=fg_main,
             bg=bg_main,
             anchor="w",
-        )
-        title_lbl.grid(row=0, column=0, sticky="w")
+        ).grid(row=0, column=0, sticky="w")
 
-        subtitle_lbl = tk.Label(
+        tk.Label(
             header,
             text="%100 Yerel (127.0.0.1 Loopback) · Sıfır Telemetri · Dokunmatik ve İmleç Destekli",
             font=("Segoe UI", 12),
             fg=fg_sec,
             bg=bg_main,
             anchor="w",
-        )
-        subtitle_lbl.grid(row=1, column=0, sticky="w", pady=(2, 0))
+        ).grid(row=1, column=0, sticky="w", pady=(2, 0))
 
-        # 1. KART: Ekran Topolojisi ve Seçimi
-        card_display = tk.Frame(
-            main_frame,
-            bg=bg_card,
-            padx=18,
-            pady=14,
-            highlightthickness=1,
-            highlightbackground="#26334D",
-        )
-        card_display.grid(row=1, column=0, sticky="ew", pady=6)
-        card_display.columnconfigure(0, weight=1)
-
-        tk.Label(
-            card_display,
-            text="1. Aktarılacak Ekran Seçimi ve Çoklu Monitör Dizilimi",
-            font=("Segoe UI", 12, "bold"),
-            fg=fg_main,
-            bg=bg_card,
-            anchor="w",
-        ).grid(row=0, column=0, sticky="w")
+    def _build_display_card(self, main_frame: tk.Frame) -> None:
+        """1. KART: Ekran topolojisi ve seçimi."""
+        _, bg_card = THEME_COLORS["secondary_text_on_card"]
+        card = self._make_card(main_frame, row=1)
+        self._make_card_title(card, "1. Aktarılacak Ekran Seçimi ve Çoklu Monitör Dizilimi")
 
         # Görsel Ekran Haritası (Tıklanabilir Ekran Kartları)
-        self.monitor_strip = tk.Frame(card_display, bg=bg_card)
+        self.monitor_strip = tk.Frame(card, bg=bg_card)
         self.monitor_strip.grid(row=1, column=0, sticky="ew", pady=(8, 8))
 
         # Tam genişlikte Combobox (Asla sağdaki butonları sıkıştırmaz)
         self.monitor_combo = ttk.Combobox(
-            card_display,
+            card,
             textvariable=self.monitor_var,
             state="readonly",
             font=("Segoe UI", 12),
@@ -148,244 +235,110 @@ class ControllerWindow:
         self.monitor_combo.bind("<<ComboboxSelected>>", self._on_monitor_selected)
 
         # Eşit genişlikte 3'lü responsive buton ızgarası
-        mon_btn_grid = tk.Frame(card_display, bg=bg_card)
-        mon_btn_grid.grid(row=3, column=0, sticky="ew", pady=(2, 4))
+        btn_grid = tk.Frame(card, bg=bg_card)
+        btn_grid.grid(row=3, column=0, sticky="ew", pady=(2, 4))
         for col_idx in range(3):
-            mon_btn_grid.columnconfigure(col_idx, weight=1, uniform="mon_btns")
+            btn_grid.columnconfigure(col_idx, weight=1, uniform="mon_btns")
 
-        self.refresh_btn = tk.Button(
-            mon_btn_grid,
-            text="Ekranları Yenile",
-            font=("Segoe UI", 12),
-            fg=fg_main,
-            bg="#26334D",
-            activebackground="#334155",
-            activeforeground=fg_main,
-            relief=tk.FLAT,
-            pady=6,
-            cursor="hand2",
-            command=self.refresh_topology,
-        )
+        self.refresh_btn = self._make_button(btn_grid, "Ekranları Yenile", self.refresh_topology)
         self.refresh_btn.grid(row=0, column=0, sticky="ew", padx=(0, 6))
 
-        self.extend_btn = tk.Button(
-            mon_btn_grid,
-            text="Masaüstünü Uzat (Extend)",
-            font=("Segoe UI", 12),
-            fg=fg_main,
-            bg="#26334D",
-            activebackground="#334155",
-            activeforeground=fg_main,
-            relief=tk.FLAT,
-            pady=6,
-            cursor="hand2",
-            command=self._on_extend_clicked,
-        )
+        self.extend_btn = self._make_button(btn_grid, "Masaüstünü Uzat (Extend)", self._on_extend_clicked)
         self.extend_btn.grid(row=0, column=1, sticky="ew", padx=6)
 
-        self.vdd_btn = tk.Button(
-            mon_btn_grid,
-            text="3. Sanal Ekranı Kur (VDD)",
-            font=("Segoe UI", 12, "bold"),
-            fg=btn_fg,
-            bg=btn_bg,
-            activebackground="#7DD3FC",
-            activeforeground=btn_fg,
-            relief=tk.FLAT,
-            pady=6,
-            cursor="hand2",
-            command=self._on_install_vdd_clicked,
+        self.vdd_btn = self._make_button(
+            btn_grid, "3. Sanal Ekranı Kur (VDD)", self._on_install_vdd_clicked, primary=True, bold=True
         )
         self.vdd_btn.grid(row=0, column=2, sticky="ew", padx=(6, 0))
 
-        self.warn_lbl = tk.Label(
-            card_display,
-            textvariable=self.topology_warn_var,
-            font=("Segoe UI", 12),
-            fg=THEME_COLORS["status_warn_on_card"][0],
-            bg=bg_card,
-            justify=tk.LEFT,
-            anchor="w",
+        self.warn_lbl = self._make_status_label(
+            card, self.topology_warn_var, fg=THEME_COLORS["status_warn_on_card"][0]
         )
         self.warn_lbl.grid(row=4, column=0, sticky="ew", pady=(6, 0))
-        self._wrap_labels.append(self.warn_lbl)
 
-        # 2. KART: Görüntü Modu ve Dokunmatik Ayarları
-        card_opts = tk.Frame(
-            main_frame,
-            bg=bg_card,
-            padx=18,
-            pady=14,
-            highlightthickness=1,
-            highlightbackground="#26334D",
-        )
-        card_opts.grid(row=2, column=0, sticky="ew", pady=6)
-        card_opts.columnconfigure(0, weight=1)
-        card_opts.columnconfigure(1, weight=1)
+    def _build_options_card(self, main_frame: tk.Frame) -> None:
+        """2. KART: Görüntü modu ve dokunmatik ayarları."""
+        card = self._make_card(main_frame, row=2)
+        card.columnconfigure(1, weight=1)
+        self._make_card_title(card, "2. Görüntü Modu ve Dokunmatik Kontrol", columnspan=2, pady=(0, 6))
 
-        tk.Label(
-            card_opts,
-            text="2. Görüntü Modu ve Dokunmatik Kontrol",
-            font=("Segoe UI", 12, "bold"),
-            fg=fg_main,
-            bg=bg_card,
-            anchor="w",
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+        style = self._choice_style()
+        tk.Radiobutton(
+            card,
+            text="Otomatik (Önerilen): hareket varken akıcı, ekran durulunca piksel keskin",
+            variable=self.mode_var,
+            value="auto",
+            **style,
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=2)
 
-        rb_reading = tk.Radiobutton(
-            card_opts,
-            text="Okuma / Kod Modu (Keskin Metin, ~%0 CPU)",
+        tk.Radiobutton(
+            card,
+            text="Okuma / Kod Modu (Hep Tam Çözünürlük, ~20 FPS)",
             variable=self.mode_var,
             value="reading",
-            font=("Segoe UI", 12),
-            fg=fg_sec,
-            bg=bg_card,
-            selectcolor="#0B0F19",
-            activebackground=bg_card,
-            activeforeground=fg_main,
-            anchor="w",
-            command=self._on_options_changed,
-        )
-        rb_reading.grid(row=1, column=0, sticky="ew", pady=2)
+            **style,
+        ).grid(row=2, column=0, sticky="ew", pady=2)
 
-        rb_video = tk.Radiobutton(
-            card_opts,
-            text="Video / Akıcı Mod (Yüksek FPS)",
+        tk.Radiobutton(
+            card,
+            text="Video / Akıcı Mod (Hep 1280x800, ~30 FPS)",
             variable=self.mode_var,
             value="video",
-            font=("Segoe UI", 12),
-            fg=fg_sec,
-            bg=bg_card,
-            selectcolor="#0B0F19",
-            activebackground=bg_card,
-            activeforeground=fg_main,
-            anchor="w",
-            command=self._on_options_changed,
-        )
-        rb_video.grid(row=1, column=1, sticky="ew", pady=2)
+            **style,
+        ).grid(row=2, column=1, sticky="ew", pady=2)
 
         self.chk_touch = tk.Checkbutton(
-            card_opts,
+            card,
             text="Tabletten Dokunmatik Kontrol (Tıklama, Sürükleme, Uzun Basma Sağ Tık, İki Parmak Kaydırma)",
             variable=self.touch_var,
-            font=("Segoe UI", 12),
-            fg=fg_sec,
-            bg=bg_card,
-            selectcolor="#0B0F19",
-            activebackground=bg_card,
-            activeforeground=fg_main,
-            anchor="w",
             justify=tk.LEFT,
-            command=self._on_options_changed,
+            **style,
         )
-        self.chk_touch.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        self.chk_touch.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
 
-        # 3. KART: USB ADB Tüneli ve Yayın Kontrolü
-        card_action = tk.Frame(
-            main_frame,
-            bg=bg_card,
-            padx=18,
-            pady=14,
-            highlightthickness=1,
-            highlightbackground="#26334D",
+    def _build_action_card(self, main_frame: tk.Frame) -> None:
+        """3. KART: USB ADB tüneli ve yayın kontrolü."""
+        fg_sec, bg_card = THEME_COLORS["secondary_text_on_card"]
+        card = self._make_card(main_frame, row=3)
+        self._make_card_title(card, "3. USB ADB Tüneli ve Yayın Kontrolü")
+
+        self._make_status_label(card, self.adb_status_var, fg=fg_sec).grid(
+            row=1, column=0, sticky="ew", pady=(6, 2)
         )
-        card_action.grid(row=3, column=0, sticky="ew", pady=6)
-        card_action.columnconfigure(0, weight=1)
-
-        tk.Label(
-            card_action,
-            text="3. USB ADB Tüneli ve Yayın Kontrolü",
-            font=("Segoe UI", 12, "bold"),
-            fg=fg_main,
-            bg=bg_card,
-            anchor="w",
-        ).grid(row=0, column=0, sticky="w")
-
-        adb_lbl = tk.Label(
-            card_action,
-            textvariable=self.adb_status_var,
-            font=("Segoe UI", 12),
-            fg=fg_sec,
-            bg=bg_card,
-            justify=tk.LEFT,
-            anchor="w",
+        self._make_status_label(
+            card, self.status_var, fg=THEME_COLORS["status_ok_on_card"][0], bold=True
+        ).grid(row=2, column=0, sticky="ew", pady=(0, 4))
+        self._make_status_label(card, self.live_metrics_var, fg=fg_sec, wrap=False).grid(
+            row=3, column=0, sticky="ew", pady=(0, 10)
         )
-        adb_lbl.grid(row=1, column=0, sticky="ew", pady=(6, 2))
-        self._wrap_labels.append(adb_lbl)
 
-        status_lbl = tk.Label(
-            card_action,
-            textvariable=self.status_var,
-            font=("Segoe UI", 12, "bold"),
-            fg=THEME_COLORS["status_ok_on_card"][0],
-            bg=bg_card,
-            justify=tk.LEFT,
-            anchor="w",
-        )
-        status_lbl.grid(row=2, column=0, sticky="ew", pady=(0, 4))
-        self._wrap_labels.append(status_lbl)
-
-        metrics_lbl = tk.Label(
-            card_action,
-            textvariable=self.live_metrics_var,
-            font=("Segoe UI", 12),
-            fg=fg_sec,
-            bg=bg_card,
-            anchor="w",
-        )
-        metrics_lbl.grid(row=3, column=0, sticky="ew", pady=(0, 10))
-
-        action_btn_grid = tk.Frame(card_action, bg=bg_card)
-        action_btn_grid.grid(row=4, column=0, sticky="ew")
+        btn_grid = tk.Frame(card, bg=bg_card)
+        btn_grid.grid(row=4, column=0, sticky="ew")
         for col_idx in range(3):
-            action_btn_grid.columnconfigure(col_idx, weight=1, uniform="act_btns")
+            btn_grid.columnconfigure(col_idx, weight=1, uniform="act_btns")
 
-        self.tunnel_btn = tk.Button(
-            action_btn_grid,
-            text="1) USB ADB Tünelini Kur",
-            font=("Segoe UI", 12, "bold"),
-            fg=fg_main,
-            bg="#26334D",
-            activebackground="#334155",
-            activeforeground=fg_main,
-            relief=tk.FLAT,
-            pady=8,
-            cursor="hand2",
-            command=self._on_setup_tunnel_clicked,
+        self.tunnel_btn = self._make_button(
+            btn_grid, "1) USB ADB Tünelini Kur", self._on_setup_tunnel_clicked, bold=True, pady=8
         )
         self.tunnel_btn.grid(row=0, column=0, sticky="ew", padx=(0, 6))
 
-        self.start_btn = tk.Button(
-            action_btn_grid,
-            text="2) Yayını Başlat (127.0.0.1:8765)",
-            font=("Segoe UI", 12, "bold"),
-            fg=btn_fg,
-            bg=btn_bg,
-            activebackground="#7DD3FC",
-            activeforeground=btn_fg,
-            relief=tk.FLAT,
+        self.start_btn = self._make_button(
+            btn_grid,
+            "2) Yayını Başlat (127.0.0.1:8765)",
+            self._on_toggle_server_clicked,
+            primary=True,
+            bold=True,
             pady=8,
-            cursor="hand2",
-            command=self._on_toggle_server_clicked,
         )
         self.start_btn.grid(row=0, column=1, sticky="ew", padx=6)
 
-        self.preview_btn = tk.Button(
-            action_btn_grid,
-            text="Tarayıcıda Test Et",
-            font=("Segoe UI", 12),
-            fg=fg_main,
-            bg="#26334D",
-            activebackground="#334155",
-            activeforeground=fg_main,
-            relief=tk.FLAT,
+        self.preview_btn = self._make_button(
+            btn_grid,
+            "Tarayıcıda Test Et",
+            lambda: webbrowser.open(f"http://127.0.0.1:{self.service.settings.port}"),
             pady=8,
-            cursor="hand2",
-            command=lambda: webbrowser.open(f"http://127.0.0.1:{self.service.settings.port}"),
         )
         self.preview_btn.grid(row=0, column=2, sticky="ew", padx=(6, 0))
-
-        self.root.bind("<Configure>", self._on_window_configure)
 
     def _on_window_configure(self, event: tk.Event) -> None:  # type: ignore[type-arg]
         if event.widget is not self.root:
@@ -474,7 +427,7 @@ class ControllerWindow:
         state_str = "Yayın Aktif" if snap.is_running else "Beklemede"
         self.live_metrics_var.set(
             f"Durum: {state_str} · Bağlı Tablet: {snap.connected_clients} · "
-            f"Gönderilen Kare: {snap.frames_sent} · Mod: {'Okuma' if snap.mode == 'reading' else 'Video'}"
+            f"Gönderilen Kare: {snap.frames_sent} · Mod: {MODE_LABELS.get(snap.mode, snap.mode)}"
         )
         self.root.after(1000, self._schedule_live_refresh)
 

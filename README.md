@@ -14,6 +14,14 @@ Windows bilgisayarınız (1. Ekran: Harici Monitör, 2. Ekran: Laptop Ekranı) i
    - Kontrol panelinde **"1) USB ADB Tünelini Kur"** ve ardından **"2) Yayını Başlat (127.0.0.1:8765)"** düğmelerine tıklayın.
 4. **Tabletten Bağlanın:**
    - Tabletteki tarayıcıdan (Chrome/Brave/Edge) **`http://127.0.0.1:8765`** adresine gidin ve sağ üstteki **"Tam Ekran"** düğmesine dokunun.
+   - Aynı anda tek tablet sekmesi bağlı kalır; ikinci bir sekme açılırsa eskisi "Başka oturum açıldı" uyarısı verir.
+
+## Görüntü Kipleri
+
+- **Otomatik (önerilen):** Ekran hareket ederken (kaydırma, video, yazma) 1280x800 hızlı kareler (~25-30 FPS); ekran ~0,2 sn durulunca tek bir tam çözünürlük (1920x1200, 4:4:4, yüksek kalite) keskin kare gönderilir. Durağan ekranda trafik ve CPU kullanımı yoktur.
+- **Okuma:** Her zaman tam çözünürlük (keskin, ancak tabletin JPEG çözme hızı nedeniyle ~20 FPS tavanı).
+- **Video:** Her zaman 1280x800 (akıcı ~30 FPS, daha yumuşak görüntü).
+- Tablet HUD'ında `çöz … ms` tabletin kare çözme süresini, sondaki `…px` ise son karenin genişliğini (1280 = hareket, 1920 = keskin) gösterir. Mod düğmesi Otomatik → Okuma → Video sırasıyla değişir.
 
 ## Gizlilik ve Ağ Güvenliği İlkeleri
 

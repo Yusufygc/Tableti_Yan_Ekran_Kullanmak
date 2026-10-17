@@ -23,3 +23,10 @@ Kod tabanı [[rules]] uyarınca sıkı bir şekilde 3 katmana ayrılmıştır (`
 - **`src/ui/` (Üst Katman):**
   - `client_assets/`: Android tablette tam ekran çalışan HTML5 Canvas + Pointer Events istemcisi.
   - `controller_app.py`: Windows tarafında ekran seçimi, tünel durumu ve başlat/durdur kontrol arayüzü.
+
+## 3. Yayın Hattı (Pipeline) ve Güvenlik Sınırı
+- **Aşamalar:** `ScreenCapturer.acquire` (yakalama thread'i: `mss` BGRA → `RawFrame`, imleç konumu, satır tabanlı BLAKE2b delta kararı) → `ScreenCapturer.encode` (kodlama thread'i: `BGRX`→JPEG, imleç çizimi, ölçekleme) → `StreamServer._send_frame` (event loop). N. kare kodlanıp gönderilirken N+1. kare yakalanır; hedef FPS aralığı `target_fps` ile korunur ([[decisions]] Karar 5).
+- **Ölçüm:** `/status` uç noktası `grab_ms`, `encode_ms`, `send_ms` (hareketli ortalama) ve `last_fps` döndürür; tablet HUD'ı alınan FPS, RTT, kare çözme süresi ve atılan kare sayısını gösterir.
+- **Otomatik kip:** `ScreenCapturer.acquire(adaptive=True)` her imza değişiminde hareket karesi (küçük, hızlı) üretir; ekran `SETTLE_SEC` değişmeyince tek `sharp` kare (tam çözünürlük, 4:4:4, `SHARP_JPEG_QUALITY`) üretir ve durağanken başka kare göndermez. Değişim olmadan 1 sn sonra yoklama `IDLE_POLL_FPS` (15) hızına iner ([[decisions]] Karar 6).
+- **İstemci:** yalnızca en son kare çözülür (eski kareler atılır); `4001` kapanış kodu "başka oturum açıldı" demektir ve yeniden bağlanma yapılmaz. Canvas sabit boyutludur (ekranın doğal çözünürlüğü); küçük hareket kareleri ve tam boyutlu keskin kareler aynı yüzeye ölçeklenerek çizilir.
+- **Güvenlik:** `loopback_guard_middleware` `Host` ve `Origin` başlıklarını doğrular (DNS rebinding ve tarayıcıdan çapraz kaynak erişimi → 403). Mod ön ayarları (`MODE_PRESETS`) `app_settings.py` içinde tek kaynaktır.

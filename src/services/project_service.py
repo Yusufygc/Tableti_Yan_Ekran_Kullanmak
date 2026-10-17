@@ -101,14 +101,8 @@ class ProjectService:
         """Kullanıcı tercihlerini günceller, diske kaydeder ve aktif sunucuya uygular."""
         if monitor_index is not None:
             self._settings.monitor_index = max(1, int(monitor_index))
-        if mode in ("reading", "video"):
-            self._settings.mode = str(mode)
-            if mode == "reading" and jpeg_quality is None:
-                self._settings.jpeg_quality = 88
-                self._settings.target_fps = 30
-            elif mode == "video" and jpeg_quality is None:
-                self._settings.jpeg_quality = 72
-                self._settings.target_fps = 45
+        if mode is not None:
+            app_settings.apply_mode_preset(self._settings, mode)  # açık kalite/FPS değerleri aşağıda üzerine yazar
         if touch_enabled is not None:
             self._settings.touch_enabled = bool(touch_enabled)
             self._injector.enabled = self._settings.touch_enabled
