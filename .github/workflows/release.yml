@@ -27,13 +27,13 @@ jobs:
         with:
           python-version: "3.10"  # yerelle aynı: exe özeti Python sürümüne bağlıdır
           cache: pip
-          cache-dependency-path: requirements-build.txt
+          cache-dependency-path: requirements-lock.txt
 
       - name: Etiket ile src/version.py uyumunu denetle
         run: python tools/release.py --check-tag "$env:TAG"
 
       - name: Bağımlılıklar
-        run: python -m pip install -r requirements-dev.txt -r requirements-build.txt
+        run: python -m pip install -r requirements-dev.txt -r requirements-build.txt -c requirements-lock.txt  # geçişli sürümler sabit: exe özeti kaymasın
 
       - run: python -m ruff check .
 

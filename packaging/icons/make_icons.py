@@ -2,8 +2,8 @@
 TabScreen USB uygulama simgesini üretir (tekrarlanabilir): `python packaging/icons/make_icons.py`.
 
 Tasarım (proje bağlamı): koyu lacivert yuvarlak kare üzerinde yatay duran bir tablet; ekranında dokunma dalgası
-(tablet istemcisindeki `touch-ripple` ile aynı motif) ve sağ altta amber "3" rozeti ("3. Ekran"). Küçük boyutlarda
-(<= 32 px) ayrıntılar sadeleşir: yalnızca tablet gövdesi, ekran ve dalga okunur kalır.
+(tablet istemcisindeki `touch-ripple` ile aynı motif) ve altında USB kablosu ipucu. Küçük boyutlarda (<= 32 px)
+ayrıntılar sadeleşir: yalnızca tablet gövdesi, ekran ve dalga okunur kalır.
 
 Çıktılar (bu klasöre): icon_<boyut>.png (16..512) ve app.ico (16, 24, 32, 48, 64, 128, 256 çerçeveleri ayrı çizilir,
 büyük resimden küçültülmez). Web istemcisi için `src/ui/client_assets/icon-192.png` da yazılır.
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -31,8 +31,6 @@ SCREEN_TOP = (56, 189, 248)  # #38BDF8 ekran (vurgu rengi)
 SCREEN_BOTTOM = (14, 116, 168)
 RIPPLE = (248, 250, 252)
 BAR = (11, 15, 25)
-AMBER = (245, 158, 11)       # #F59E0B rozet
-AMBER_TEXT = (11, 15, 25)
 
 
 def _vertical_gradient(size: int, top: tuple[int, int, int], bottom: tuple[int, int, int]) -> Image.Image:
@@ -115,14 +113,6 @@ def draw_icon(size: int) -> Image.Image:
             fill=(148, 163, 184),
             width=max(2, int(s * 0.022)),
         )
-
-    # "3" rozeti (3. Ekran): sağ alt
-    badge_r = int(s * (0.19 if detailed else (0.23 if mid else 0.27)))
-    bcx, bcy = int(s * (0.76 if detailed else 0.74)), int(s * (0.77 if detailed else 0.74))
-    draw.ellipse((bcx - badge_r, bcy - badge_r, bcx + badge_r, bcy + badge_r), fill=AMBER, outline=BG_BOTTOM, width=max(2, int(s * 0.02)))
-    font_path = Path(r"C:\Windows\Fonts\segoeuib.ttf")
-    font = ImageFont.truetype(str(font_path), int(badge_r * 1.45)) if font_path.is_file() else ImageFont.load_default()
-    draw.text((bcx, bcy), "3", font=font, fill=AMBER_TEXT, anchor="mm")
 
     return canvas.resize((size, size), Image.Resampling.LANCZOS)
 

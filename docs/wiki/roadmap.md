@@ -5,7 +5,7 @@ Bu sayfa [[index]] kapsamında projenin aşamalarını takip eder. Mimari detayl
 ## Aşama 1: İlk Gün Altyapısı ve LLM Wiki Kurulumu (Tamamlandı)
 - [x] `plan.md` oluşturulması ([[decisions]]).
 - [x] `CLAUDE.md` ve `docs/wiki/` ([[index]], [[rules]], [[decisions]], [[architecture]], [[testing]], [[roadmap]], [[log]]) kurulumu.
-- [x] Depo hijyeni (`.gitattributes`, `.editorconfig`, `.gitignore`, `LICENSE`, sabit `requirements*.txt`, `ruff.toml`, `pytest.ini`, `.github/workflows/ci.yml`).
+- [x] Depo hijyeni (`.gitattributes`, `.editorconfig`, `.gitignore`, sabit `requirements*.txt`, `ruff.toml`, `pytest.ini`, `.github/workflows/ci.yml`).
 - [x] Çekirdek loglama (`logging_config.py`), ayar yalıtımı (`app_settings.py`) ve bekçi testlerin (`test_wiki`, `test_layering`, `test_code_hygiene`, `test_logging_config`) doğrulanması.
 
 ## Aşama 2: Çekirdek Modüller (Ekran Yakalama, Dokunmatik Enjeksiyon ve ADB Tüneli) (Tamamlandı)

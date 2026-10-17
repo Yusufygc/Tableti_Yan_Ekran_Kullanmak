@@ -56,7 +56,6 @@ P029-Tablet_Ekrani_Kullanimi/
 ├── .gitignore
 ├── .github/workflows/ci.yml
 ├── CLAUDE.md
-├── LICENSE
 ├── plan.md
 ├── pytest.ini
 ├── ruff.toml
@@ -108,7 +107,7 @@ P029-Tablet_Ekrani_Kullanimi/
 ## 4. Uygulama Aşamaları (Her Aşama Sonunda Rapor Verilir ve Onay Beklenir)
 
 ### Aşama 1: İlk Gün Altyapısı ve LLM Wiki Kurulumu *(Mevcut Aşama)*
-- Git deposu başlatılması, `.gitattributes`, `.editorconfig`, `.gitignore`, `LICENSE` (MIT).
+- Git deposu başlatılması, `.gitattributes`, `.editorconfig`, `.gitignore`.
 - Sabit sürümlü `requirements.txt`, `requirements-dev.txt`, `requirements-build.txt`.
 - `ruff.toml`, `pytest.ini` (`EncodingWarning` hataya çevrilmiş), `.github/workflows/ci.yml`.
 - `CLAUDE.md` ve `docs/wiki/` (index, rules, decisions, architecture, testing, roadmap, log) kurulumu.

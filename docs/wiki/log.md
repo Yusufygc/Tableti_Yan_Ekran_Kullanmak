@@ -2,6 +2,16 @@
 
 Bu sayfa [[index]] kapsamında projede yapılan tüm önemli değişiklikleri en yeni kayıt en üstte olacak şekilde listeler. Kurallar için [[rules]] sayfasına bakın.
 
+## [2026-10-18] UPDATE | Proje Lisans Dosyası Kaldırıldı ve İkondaki "3" Rozeti Çıkarıldı
+- Kullanıcı isteğiyle `LICENSE` (MIT) silindi; `LicenseFile` (Inno), `--add-data LICENSE` (PyInstaller) ve `plan.md`/[[roadmap]] referansları temizlendi. Projenin kendi lisansı yoktur. Üçüncü taraf lisans metinleri (`third_party/vdd/LICENSE-*.txt`, adb `NOTICE.txt`) yeniden dağıtım gereği olduğundan **kalır**.
+- İkondan amber "3" rozeti kaldırıldı (`packaging/icons/make_icons.py`); simgeler yeniden üretildi. İkon exe'ye gömüldüğünden exe özeti değişti: onaylı özet temiz ortamda `ea66a397…2fe3` olarak güncellendi, exe ve kurulum dosyası (46,4 MB) bu makinede denendi (sessiz kurulum + kaldırıcı başarılı). Önceki `97e16ac4…` kaydı tarihçe olarak kalır.
+
+## [2026-10-17] REVIEW | İlk Release Denemesi: CI Exe Özeti Kapıda Durdu; Neden: Python Ortam Farkı
+- `main` `7ee586d`'ye ilerletildi ve itildi (CI yeşil, 95 test); `v0.1.0` etiketi itildi. Release iş akışı lint/test/Inno adımlarını geçti, `Kurulum dosyasını derle` adımında kapı yayını durdurdu (Release oluşmadı): CI `97e16ac4…1823` ≠ onaylı `82d57543…f44b`.
+- Ayrıştırma: temiz venv (dev+build) ve yalnızca-build venv, hem `git archive` hem çalışma ağacıyla CI ile aynı `97e16ac4…`; ana geliştirme venv'i her zaman `82d57543…`. Fark: ana venv'de ek paketler (pip-audit zinciri) ve farklı geçişli sürümler (`multidict` 6.9.1 / 7.1.0). Dosya, satır sonu ve kök klasörden kaynaklanmıyor.
+- Çözüm: `requirements-lock.txt` (geçişli bağımlılık sabitleri), `release.yml` `-c requirements-lock.txt`, onaylı özet `97e16ac4…` olarak güncellendi; bu exe ve kurulum dosyası bu makinede denendi (açıldı, sessiz kurulum + kaldırıcı başarılı, 46,5 MB). `.venv-build/` ignore'a eklendi; test sayısı 96. [[exe-dagitim-rehberi]], [[surum-yayinlama]] güncellendi.
+- Hâlâ doğrulanmadı: SAC'lı makinede açılış (bu makinede SAC kapalı), gerçek Release ile uçtan uca güncelleme.
+
 ## [2026-10-17] INGEST | Exe Dağıtımı, Sürüm Yayını ve Uygulama İçi Güncelleme Sistemi (Prod Hazırlığı Rehberlerine Göre)
 - Kaynaklar: `D002-HazirPromptlar/Prod hazırlığı/` altındaki üç rehber (exe dağıtımı, güncelleme sistemi, sürüm yayınlama). Bu projeye uyarlandı: PySide6/QML yığını, `TabScreenUSB` adı, `Yusufygc/Tableti_Yan_Ekran_Kullanmak` deposu. Yeni sayfalar: [[exe-dagitim-rehberi]], [[surum-yayinlama]], [[guncelleme-sistemi]]; [[decisions]] Karar 8, [[roadmap]] Aşama 5.
 - Simgeler: `packaging/icons/make_icons.py` ile 16-512 px PNG (10 boyut) ve 7 çerçeveli `app.ico`; tasarım: tablet + dokunma dalgası + amber "3" rozeti; tablet web sekmesi için `icon-192.png` ve `/icon-192.png` rotası.

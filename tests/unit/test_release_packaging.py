@@ -213,3 +213,27 @@ def test_installer_discovery_and_checksum_file(tmp_path: Path) -> None:
     checksum = build_installer.write_checksum(installer)
     assert checksum.name == installer.name + ".sha256"
     assert checksum.read_text(encoding="utf-8") == f"{hashlib.sha256(b'x' * 100).hexdigest()} *{installer.name}\n"
+
+
+def test_lock_file_pins_direct_and_transitive_build_dependencies() -> None:
+    """Exe özeti paket sürümlerine duyarlı (ana venv ≠ temiz venv örneği): kilit dosyası geçişli sürümleri de sabitler."""
+
+    def norm(name: str) -> str:
+        return name.strip().lower().replace("_", "-")
+
+    lock = (ROOT / "requirements-lock.txt").read_text(encoding="utf-8")
+    pins = {
+        norm(line.split("==")[0]): line.split("==")[1].strip()
+        for line in lock.splitlines()
+        if "==" in line and not line.startswith("#")
+    }
+    for requirements in ("requirements.txt", "requirements-build.txt"):
+        for line in (ROOT / requirements).read_text(encoding="utf-8").splitlines():
+            if "==" in line and not line.startswith("-"):
+                name, ver = line.split("==")
+                assert norm(name) in pins, f"{name} kilitte yok"
+                assert pins[norm(name)] == ver.strip(), f"{name} sürümü kilitle uyumsuz"
+    for transitive in ("multidict", "yarl", "frozenlist", "shiboken6", "pyinstaller-hooks-contrib"):
+        assert transitive in pins, f"geçişli bağımlılık kilitli olmalı: {transitive}"
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert "-c requirements-lock.txt" in workflow

@@ -21,7 +21,6 @@ CloseApplications=yes
 RestartApplications=no
 SetupIconFile=icons\app.ico
 UninstallDisplayIcon={app}\TabScreenUSB.exe
-LicenseFile=..\LICENSE
 OutputDir=..\dist\installer
 ; Surumlu ad: guncelleyici bu desene bakar (TabScreenUSB-Setup-X.Y.Z.exe)
 OutputBaseFilename=TabScreenUSB-Setup-{#AppVersion}

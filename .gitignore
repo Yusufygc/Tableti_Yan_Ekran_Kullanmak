@@ -14,3 +14,4 @@ logs/
 # Yerel, kopyalanmış eski araçlar (yayına giren kopyalar third_party/ altındadır)
 tools/platform-tools/
 tools/vdd/
+.venv-build/

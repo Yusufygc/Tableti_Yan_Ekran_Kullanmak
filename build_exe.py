@@ -57,7 +57,6 @@ def pyinstaller_arguments(root: Path = ROOT) -> list[str]:
         f"--add-data={root / 'third_party'}{sep}third_party",
         f"--add-data={root / '3_ekran_kur.bat'}{sep}.",
         f"--add-data={root / '3_ekran_kaldir.bat'}{sep}.",
-        f"--add-data={root / 'LICENSE'}{sep}.",
         f"--add-data={root / 'THIRD_PARTY_NOTICES.md'}{sep}.",
     ]
 

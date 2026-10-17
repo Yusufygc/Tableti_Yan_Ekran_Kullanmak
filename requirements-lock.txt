@@ -1,0 +1,24 @@
+# Kararlı exe için GEÇİŞLİ bağımlılık kilidi (constraint): CI ve yerel release derlemesi aynı sürümlerle çalışsın.
+# Kanıt: ana venv (pip-audit + multidict 6.9.1) exe özeti 82d57543…, temiz venv ve CI 97e16ac4… üretti (2026-10-17).
+# Üretim: temiz venv'e 'pip install -r requirements.txt pyinstaller==6.22.3' sonra 'pip freeze'. Güncelleme: docs/wiki/exe-dagitim-rehberi.md bölüm 8.
+PySide6_Essentials==6.12.0
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.5
+aiosignal==1.4.0
+altgraph==0.17.5
+async-timeout==5.0.1
+attrs==26.1.0
+frozenlist==1.8.0
+idna==3.20
+mss==10.2.0
+multidict==7.1.0
+packaging==26.3
+pefile==2024.8.26
+pillow==12.3.0
+propcache==0.5.4
+pyinstaller-hooks-contrib==2026.8
+pyinstaller==6.22.3
+pywin32-ctypes==0.2.3
+shiboken6==6.12.0
+typing_extensions==4.16.0
+yarl==1.25.1

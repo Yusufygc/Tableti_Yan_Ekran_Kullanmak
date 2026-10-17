@@ -21,6 +21,8 @@ gh release view v0.2.0            # kurulum dosyası ve .sha256 var mı
 `.github/workflows/release.yml` sırayla: (1) etiket ↔ `src/version.py` denetimi (`tools/release.py --check-tag`; etiket adı ortam değişkeniyle verilir, komut enjeksiyonu olmasın), (2) `ruff` + `pytest`, (3) Inno Setup yoksa `choco install innosetup`, (4) `python build_installer.py` (exe özet kapısı: `packaging/launcher.sha256` ile farklıysa **yayın durur**; CI'da SAC denemesi atlanır), (5) `gh release create ... --generate-notes --verify-tag` (`-` içeren etiket ön sürüm olur). Sürüm notları commit mesajlarından üretilir: mesajlar Türkçe ve anlaşılır yazılır.
 
 ## Yerelde deneme
+Özet CI'daki temiz ortamla eşleşsin diye yerel release derlemesi **temiz venv** ile yapılır: `python -m venv .venv-build` ardından `.venv-build\Scripts\pip install -r requirements.txt pyinstaller==6.22.3 -c requirements-lock.txt` ve `.venv-build\Scripts\python build_installer.py`. Ana geliştirme venv'i (pip-audit, farklı geçişli sürümler) farklı exe özeti üretir ([[exe-dagitim-rehberi]]).
+
 `python build_installer.py` (≈2-3 dk): exe derle + kapı + exe'yi 8 sn aç + Inno derle + `.sha256` yaz + kurulum dosyasını geçici dizine sessizce kur, aç, kaldır. Deneme gerçek kurulum kaydını yedekleyip geri yazar (`build_verify`). `--skip-build`, `--no-verify`, `--update-launcher-hash` seçenekleri vardır.
 
 ## Kontrol listesi
@@ -44,4 +46,4 @@ gh release view v0.2.0            # kurulum dosyası ve .sha256 var mı
 - Yayın tüm kurulu kullanıcılara güncelleme penceresi çıkarır: **yapay zekâ asistanları kullanıcının açık isteği olmadan etiket oluşturmaz veya itmez.** (`tools/release.py` itmez; test bunu denetler.)
 - İndirme adresi yalnızca `https://github.com/Yusufygc/Tableti_Yan_Ekran_Kullanmak/releases/download/...` olabilir; boyut ve SHA-256 doğrulanır, özet yoksa güncelleme reddedilir; bu kontroller kaldırılmaz.
 - Kurulum dosyası imzasızdır: SmartScreen/SAC engeli olabilir. Yalnızca Windows.
-- **Durum:** henüz hiç Release yayınlanmadı (sürüm `0.1.0` yerelde derlendi ve denendi; GitHub'a etiket itilmedi).
+- **Durum:** `v0.1.0` etiketi itildi ancak ilk Release iş akışı exe özet kapısında durdu (CI `97e16ac4…` ≠ yerel `82d57543…`; Release oluşmadı). Neden bulundu, kilit dosyası eklendi, onaylı özet temiz ortamdaki değerle güncellendi; etiket düzeltme commit'ine taşınıp iş akışı yeniden koşturulacak ([[exe-dagitim-rehberi]]).
