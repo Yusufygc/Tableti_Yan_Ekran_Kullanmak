@@ -39,6 +39,8 @@ Windows 11'de SAC açıksa imzasız her çalıştırılabilir dosya (exe, DLL, k
 | Yalnızca derleme bağımlılıkları (`requirements.txt` + PyInstaller) | `git archive` | `97e16ac4…` |
 Sonuç: fark dosyalardan/satır sonlarından değil **Python ortamındaki paket kümesinden** geliyor (ana venv'de geçişli bağımlılık sürümleri ve ek paketler farklıydı). Çözüm: (1) `requirements-lock.txt` geçişli sürümleri sabitler, `release.yml` `-c requirements-lock.txt` ile kurar; (2) onaylı özet **temiz ortamda** üretilen `97e16ac4…` olarak güncellendi ve bu exe bu makinede denendi (açıldı, pencere başlığı doğru; tam `build_installer.py` akışı başarılı, 46,5 MB); (3) kural: özet onayı ve yayın derlemesi yalnızca temiz venv/CI'da yapılır (`python -m venv .venv-build; .venv-build\Scripts\pip install -r requirements.txt pyinstaller==6.22.3`).
 
+**Doğrulandı (2026-10-18):** CI'da derlenen exe özeti yerelde (temiz venv) onaylananla aynı (`ea66a397…2fe3`; `v0.1.0` Release iş akışı kapıyı geçti).
+
 **Doğrulanmadı:** bu makinede SAC kapalı (`VerifiedAndReputablePolicyState=0`); exe/kurulum dosyasının SAC'lı başka makinede açılacağı, CI'da derlenen exe özetinin yerelle aynı çıkacağı (ilk Release'te kapı günlüğüne bakılmalı) ve indirilmiş (MOTW'li) kurulum dosyasının SAC'lı makinede açılacağı **henüz denenmedi**. İlk yayından sonra bu üç madde elle doğrulanıp bu tabloya işlenecek.
 
 ## 4. Kurulum sihirbazı (`packaging/TabScreenUSB.iss`)

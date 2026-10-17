@@ -2,6 +2,11 @@
 
 Bu sayfa [[index]] kapsamında projede yapılan tüm önemli değişiklikleri en yeni kayıt en üstte olacak şekilde listeler. Kurallar için [[rules]] sayfasına bakın.
 
+## [2026-10-18] INGEST | İlk Release v0.1.0 Yayınlandı
+- `main` `feb2be1`'e itildi (CI yeşil); yayınlanmamış `v0.1.0` etiketi (eski `7ee586d`'den) `feb2be1`'e taşınıp zorla itildi (Release yoktu, kimse tüketmemişti). Release iş akışı geçti: etiket/sürüm denetimi, ruff, pytest, Inno, **exe özet kapısı** ("Kararlı exe özeti onaylananla aynı: `ea66a397…2fe3`"), `gh release create`.
+- Çıktı: `TabScreenUSB-Setup-0.1.0.exe` (46,9 MB, digest `43b7849f…950f`) ve `.sha256`; ön sürüm/taslak değil. Güncelleme sistemi yayını `releases/latest` üzerinden görür ([[guncelleme-sistemi]]).
+- Hâlâ doğrulanmadı: indirilen kurulum dosyasının SAC'lı makinede açılması; `0.1.0 → 0.1.1` uygulama içi güncelleme (ikinci bir sürüm gerekir). [[surum-yayinlama]], [[exe-dagitim-rehberi]], [[roadmap]] güncellendi.
+
 ## [2026-10-18] UPDATE | Proje Lisans Dosyası Kaldırıldı ve İkondaki "3" Rozeti Çıkarıldı
 - Kullanıcı isteğiyle `LICENSE` (MIT) silindi; `LicenseFile` (Inno), `--add-data LICENSE` (PyInstaller) ve `plan.md`/[[roadmap]] referansları temizlendi. Projenin kendi lisansı yoktur. Üçüncü taraf lisans metinleri (`third_party/vdd/LICENSE-*.txt`, adb `NOTICE.txt`) yeniden dağıtım gereği olduğundan **kalır**.
 - İkondan amber "3" rozeti kaldırıldı (`packaging/icons/make_icons.py`); simgeler yeniden üretildi. İkon exe'ye gömüldüğünden exe özeti değişti: onaylı özet temiz ortamda `ea66a397…2fe3` olarak güncellendi, exe ve kurulum dosyası (46,4 MB) bu makinede denendi (sessiz kurulum + kaldırıcı başarılı). Önceki `97e16ac4…` kaydı tarihçe olarak kalır.

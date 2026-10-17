@@ -31,4 +31,5 @@ Bu sayfa [[index]] kapsamında projenin aşamalarını takip eder. Mimari detayl
 - [x] Kurulum: `packaging/TabScreenUSB.iss`, `build_installer.py`, `build_verify.py` (gerçek kayıt korumalı deneme).
 - [x] Yayın: `tools/release.py`, `.github/workflows/release.yml` ([[surum-yayinlama]]).
 - [x] Güncelleme: `update_service`, `UpdateViewModel`, `UpdateDialog.qml` ([[guncelleme-sistemi]]).
-- [ ] `main` dalına birleştirme, ilk etiket (`v0.1.0`), CI'da derlenen exe özetinin yerelle aynı çıktığının ve SAC'lı makinede açıldığının doğrulanması, `0.1.0 → 0.1.1` uçtan uca güncelleme denemesi.
+- [x] `main` dalına birleştirme, ilk Release `v0.1.0` yayınlandı, CI exe özeti yerelle aynı (2026-10-18).
+- [ ] İndirilen (MOTW'li) kurulum dosyasının SAC'lı makinede açıldığının doğrulanması ve `0.1.0 → 0.1.1` uçtan uca güncelleme denemesi.
